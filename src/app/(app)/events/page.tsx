@@ -13,9 +13,18 @@ interface EventRow {
   purchases_items?: number;
 }
 
+const HALL_ORDER = ["ROSALIA", "PONDAL", "CASTELAO", "CURROS", "CUNQUEIRO", "HALL", "RESTAURANTE", "BAR"];
+
+const normalizeHall = (hall: string) => hall.trim().toUpperCase();
+const hallIndex = (hall: string) => {
+  const idx = HALL_ORDER.findIndex((h) => h === normalizeHall(hall));
+  return idx === -1 ? HALL_ORDER.length : idx;
+};
+
 export default function EventsPage() {
   const [rows, setRows] = useState<EventRow[]>([]);
   const [selectedDate, setSelectedDate] = useState<string>("");
+  const [selectedEventHall, setSelectedEventHall] = useState<string>("");
   const [menuSource, setMenuSource] = useState<"bd" | "archivo">("bd");
   const [menu, setMenu] = useState<string>("Buffet continental");
   const [sheet, setSheet] = useState<EventRow[]>([]);
@@ -29,10 +38,30 @@ export default function EventsPage() {
     return new Date(now.getFullYear(), now.getMonth(), 1);
   });
 
-  const sortedRows = useMemo(
-    () => [...rows].sort((a, b) => (a.event_date < b.event_date ? -1 : 1)),
-    [rows],
-  );
+  const sortedRows = useMemo(() => {
+    return [...rows].sort((a, b) => {
+      if (a.event_date === b.event_date) {
+        return hallIndex(a.hall) - hallIndex(b.hall);
+      }
+      return a.event_date < b.event_date ? -1 : 1;
+    });
+  }, [rows]);
+
+  const eventsByDay = useMemo(() => {
+    const map = new Map<string, EventRow[]>();
+    for (const r of rows) {
+      const list = map.get(r.event_date) ?? [];
+      list.push(r);
+      map.set(r.event_date, list);
+    }
+    for (const [date, list] of map.entries()) {
+      list.sort((a, b) => hallIndex(a.hall) - hallIndex(b.hall) || a.name.localeCompare(b.name));
+      map.set(date, list);
+    }
+    return map;
+  }, [rows]);
+
+  const selectedDayEvents = selectedDate ? eventsByDay.get(selectedDate) ?? [] : [];
 
   const calendarDays = useMemo(() => {
     const start = new Date(monthCursor.getFullYear(), monthCursor.getMonth(), 1);
@@ -43,7 +72,7 @@ export default function EventsPage() {
       const iso = dt.toISOString().slice(0, 10);
       days.push({ label: d, iso });
     }
-    const firstDay = start.getDay(); // 0-6
+    const firstDay = start.getDay(); // 0-6 (D-L-M-X-J-V-S)
     const padding = Array.from({ length: firstDay }, () => null);
     return [...padding, ...days] as (null | { label: number; iso: string })[];
   }, [monthCursor]);
@@ -56,13 +85,19 @@ export default function EventsPage() {
       const json = await res.json();
       const data = (json.data as EventRow[]) ?? [];
       setRows(data);
-      if (!selectedDate && data.length > 0) setSelectedDate(data[0].event_date);
+      if (!selectedDate && data.length > 0) {
+        const todayIso = new Date().toISOString().slice(0, 10);
+        const pick = eventsByDay.get(todayIso)?.length ? todayIso : data[0].event_date;
+        setSelectedDate(pick);
+        const firstHall = eventsByDay.get(pick)?.[0]?.hall ?? "";
+        setSelectedEventHall(firstHall);
+      }
       setMessage("");
     } catch {
       setRows([]);
       setError("No se pudo cargar eventos");
     }
-  }, [selectedDate]);
+  }, [selectedDate, eventsByDay]);
 
   useEffect(() => {
     refresh();
@@ -133,20 +168,34 @@ export default function EventsPage() {
     }
   }
 
+  const upcoming = useMemo(() => {
+    const today = new Date();
+    const limit = new Date();
+    limit.setDate(today.getDate() + 30);
+    return sortedRows.filter((r) => {
+      const d = new Date(r.event_date);
+      return d >= today && d <= limit;
+    });
+  }, [sortedRows]);
+
+  const handleSelectDate = (iso: string) => {
+    setSelectedDate(iso);
+    const firstHall = eventsByDay.get(iso)?.[0]?.hall ?? "";
+    setSelectedEventHall(firstHall);
+  };
+
   return (
     <main className="min-h-screen bg-slate-950 text-white px-6 py-10 space-y-8">
       <header className="space-y-2">
         <p className="text-xs uppercase tracking-[0.2em] text-emerald-300">Eventos</p>
-        <h1 className="text-3xl font-semibold">Importar, adjuntar menú y generar hojas</h1>
-        <p className="text-slate-300">
-          Idempotente por fecha: reimportar reemplaza. Adjunta menú (BD o archivo) y genera hoja de producción/compras.
-        </p>
+        <h1 className="text-3xl font-semibold">Calendario, menús y hojas de eventos</h1>
+        <p className="text-slate-300">Importa XLSX (matriz fecha x salón), navega el mes, adjunta menú y genera compras/producción.</p>
         {message && <p className="text-xs text-emerald-200">{message}</p>}
         {error && <p className="text-xs text-rose-300">{error}</p>}
       </header>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <section className="bg-white/5 border border-white/10 rounded-xl p-6 space-y-4">
+      <div className="grid gap-4 lg:grid-cols-3">
+        <section className="bg-white/5 border border-white/10 rounded-xl p-6 space-y-4 lg:col-span-1">
           <h2 className="text-lg font-semibold">Importar eventos (Excel)</h2>
           <form className="space-y-3" aria-label="events-import-form" onSubmit={handleImport}>
             <input aria-label="Archivo Eventos" name="file" type="file" accept=".xlsx,.xls" className="text-sm" />
@@ -160,38 +209,46 @@ export default function EventsPage() {
               </button>
             </div>
           </form>
-          <p className="text-xs text-slate-400">
-            Idempotente: misma fecha → reemplaza versión anterior. Hash guardado en import table.
-          </p>
+          <div className="text-[11px] text-slate-400 space-y-1">
+            <p>Matriz por trimestre: fila 1 salones en orden ROSALIA, PONDAL, CASTELAO, CURROS, CUNQUEIRO, HALL, RESTAURANTE, BAR.</p>
+            <p>Columna A: fechas por día del mes; celdas: "Nombre | Tipo | PAX". Reimportar reemplaza (idempotente).</p>
+          </div>
         </section>
 
-        <section className="bg-white/5 border border-white/10 rounded-xl p-6 space-y-4">
-          <h2 className="text-lg font-semibold">Adjuntar menú y generar hoja</h2>
-          <div className="grid gap-3 md:grid-cols-2">
+        <section className="bg-white/5 border border-white/10 rounded-xl p-6 space-y-4 lg:col-span-2">
+          <h2 className="text-lg font-semibold">Adjuntar menú y generar hojas</h2>
+          <div className="grid gap-3 md:grid-cols-3">
             <label className="text-sm text-slate-300 flex flex-col gap-1">
               Fecha evento
               <input
                 value={selectedDate}
-                onChange={(e) => setSelectedDate(e.target.value)}
+                onChange={(e) => handleSelectDate(e.target.value)}
                 type="date"
                 className="rounded bg-slate-900 border border-white/10 px-3 py-2"
               />
             </label>
             <label className="text-sm text-slate-300 flex flex-col gap-1">
+              Salón seleccionado
+              <input
+                value={selectedEventHall}
+                onChange={(e) => setSelectedEventHall(e.target.value)}
+                placeholder="ROSALIA"
+                className="rounded bg-slate-900 border border-white/10 px-3 py-2"
+              />
+            </label>
+            <label className="text-sm text-slate-300 flex flex-col gap-1">
               Origen menú
-              <div className="flex gap-2">
-                <select
-                  value={menuSource}
-                  onChange={(e) => setMenuSource(e.target.value as "bd" | "archivo")}
-                  className="flex-1 rounded bg-slate-900 border border-white/10 px-3 py-2 text-sm"
-                >
-                  <option value="bd">Base de datos</option>
-                  <option value="archivo">Archivo/imagen (OCR futura)</option>
-                </select>
-              </div>
+              <select
+                value={menuSource}
+                onChange={(e) => setMenuSource(e.target.value as "bd" | "archivo")}
+                className="rounded bg-slate-900 border border-white/10 px-3 py-2 text-sm"
+              >
+                <option value="bd">Base de datos</option>
+                <option value="archivo">Archivo/imagen (OCR futura)</option>
+              </select>
             </label>
             {menuSource === "bd" ? (
-              <label className="text-sm text-slate-300 flex flex-col gap-1 md:col-span-2">
+              <label className="text-sm text-slate-300 flex flex-col gap-1 md:col-span-3">
                 Menú BD
                 <select
                   value={menu}
@@ -199,19 +256,21 @@ export default function EventsPage() {
                   className="rounded bg-slate-900 border border-white/10 px-3 py-2 text-sm"
                 >
                   {menusFromDb.map((m) => (
-                    <option key={m} value={m}>{m}</option>
+                    <option key={m} value={m}>
+                      {m}
+                    </option>
                   ))}
                 </select>
               </label>
             ) : (
-              <label className="text-sm text-slate-300 flex flex-col gap-1 md:col-span-2 opacity-70">
+              <label className="text-sm text-slate-300 flex flex-col gap-1 md:col-span-3 opacity-70">
                 Subir archivo / imagen (OCR próximamente)
                 <input
                   type="file"
                   disabled
                   className="rounded bg-slate-900 border border-dashed border-white/20 px-3 py-2 text-sm"
                 />
-                <span className="text-[11px] text-slate-400">En esta versión usa menú de BD; OCR llegará en la siguiente iteración.</span>
+                <span className="text-[11px] text-slate-400">Versión actual: usa menú de BD. OCR se activará después.</span>
               </label>
             )}
           </div>
@@ -222,7 +281,7 @@ export default function EventsPage() {
               disabled={attaching || !selectedDate}
               className="rounded-lg bg-emerald-500 text-black font-semibold px-4 py-2 disabled:opacity-60"
             >
-              {attaching ? "Adjuntando..." : "Adjuntar menú"}
+              {attaching ? "Adjuntando..." : "Adjuntar menú (fecha completa)"}
             </button>
             <button
               type="button"
@@ -233,27 +292,25 @@ export default function EventsPage() {
               {loadingSheet ? "Generando..." : "Generar hoja producción/compras"}
             </button>
           </div>
-          <p className="text-xs text-slate-400">OCR futura: hoy permite menú BD/texto y adjunto manual.</p>
+          <p className="text-xs text-slate-400">
+            Adjunta menú al conjunto de eventos de esa fecha (por salón). La hoja muestra producción y compras escaladas por pax.
+          </p>
         </section>
       </div>
 
       <section className="bg-white/5 border border-white/10 rounded-xl p-6 space-y-3">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Calendario mensual (stub)</h2>
+          <h2 className="text-lg font-semibold">Calendario mensual</h2>
           <div className="flex gap-2 text-sm">
             <button
               className="rounded-md border border-white/10 px-3 py-1 hover:bg-white/10"
-              onClick={() =>
-                setMonthCursor((d) => new Date(d.getFullYear(), d.getMonth() - 1, 1))
-              }
+              onClick={() => setMonthCursor((d) => new Date(d.getFullYear(), d.getMonth() - 1, 1))}
             >
               ‹ Mes
             </button>
             <button
               className="rounded-md border border-white/10 px-3 py-1 hover:bg-white/10"
-              onClick={() =>
-                setMonthCursor((d) => new Date(d.getFullYear(), d.getMonth() + 1, 1))
-              }
+              onClick={() => setMonthCursor((d) => new Date(d.getFullYear(), d.getMonth() + 1, 1))}
             >
               Mes ›
             </button>
@@ -269,34 +326,89 @@ export default function EventsPage() {
             ) : (
               <button
                 key={day.iso}
-                onClick={() => setSelectedDate(day.iso)}
-                className={`h-16 rounded-lg border border-white/10 p-2 text-left transition-colors ${
+                onClick={() => handleSelectDate(day.iso)}
+                className={`h-20 rounded-lg border border-white/10 p-2 text-left transition-colors ${
                   selectedDate === day.iso ? "bg-emerald-500/20 border-emerald-300/40" : "hover:bg-white/5"
                 }`}
               >
                 <div className="flex items-center justify-between text-[11px] text-slate-300">
                   <span>{day.label}</span>
-                  {rows.some((r) => r.event_date === day.iso) && (
-                    <span className="h-2 w-2 rounded-full bg-emerald-400" />
-                  )}
+                  {rows.some((r) => r.event_date === day.iso) && <span className="h-2 w-2 rounded-full bg-emerald-400" />}
                 </div>
-                <div className="mt-1 text-[11px] text-slate-400">
-                  {rows.find((r) => r.event_date === day.iso)?.menu_name ?? ""}
+                <div className="mt-1 flex flex-wrap gap-1">
+                  {(eventsByDay.get(day.iso) ?? []).slice(0, 3).map((ev) => (
+                    <span
+                      key={ev.hall}
+                      className="px-2 py-0.5 rounded-full bg-white/10 text-[10px] text-slate-200"
+                    >
+                      {ev.hall}
+                    </span>
+                  ))}
+                  {(eventsByDay.get(day.iso)?.length ?? 0) > 3 && (
+                    <span className="px-2 py-0.5 rounded-full bg-slate-800 text-[10px] text-slate-300">
+                      +{(eventsByDay.get(day.iso)?.length ?? 0) - 3}
+                    </span>
+                  )}
                 </div>
               </button>
             ),
           )}
         </div>
-        <p className="text-[11px] text-slate-400">
-          Click en una fecha para precargar el adjunte de menú y generar hojas. CRUD calendario completo pendiente (stub).
-        </p>
-        {message && <p className="text-[11px] text-emerald-200">{message}</p>}
+        <div className="grid gap-3 md:grid-cols-3">
+          <div className="md:col-span-2 bg-slate-900/60 border border-white/5 rounded-lg p-4 space-y-2">
+            <div className="flex items-center justify-between text-sm text-slate-200">
+              <span>Eventos del {selectedDate || "—"}</span>
+              <span className="text-xs text-slate-400">{selectedDayEvents.length} eventos</span>
+            </div>
+            {selectedDayEvents.length === 0 && <p className="text-xs text-slate-400">Sin eventos este día.</p>}
+            <div className="space-y-2 max-h-48 overflow-auto pr-1">
+              {selectedDayEvents.map((ev) => {
+                const isSelected = selectedEventHall === ev.hall;
+                return (
+                  <button
+                    key={ev.hall}
+                    onClick={() => setSelectedEventHall(ev.hall)}
+                    className={`w-full text-left rounded-md border px-3 py-2 text-sm ${
+                      isSelected ? "border-emerald-300/40 bg-emerald-500/10" : "border-white/10 bg-white/5 hover:bg-white/10"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-semibold">{ev.hall}</span>
+                      <span className="text-xs text-slate-400">{ev.attendees} pax</span>
+                    </div>
+                    <div className="text-slate-200">{ev.name}</div>
+                    <div className="text-xs text-slate-400">{ev.event_type ?? "Tipo no indicado"}</div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          <div className="bg-slate-900/60 border border-white/5 rounded-lg p-4 space-y-2">
+            <div className="flex items-center justify-between text-sm text-slate-200">
+              <span>Próximos 30 días</span>
+              <span className="text-xs text-slate-400">{upcoming.length}</span>
+            </div>
+            <div className="space-y-2 max-h-48 overflow-auto pr-1 text-sm">
+              {upcoming.length === 0 && <p className="text-xs text-slate-400">Sin eventos próximos.</p>}
+              {upcoming.map((ev) => (
+                <div key={`${ev.event_date}-${ev.hall}`} className="rounded-md border border-white/10 px-3 py-2">
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold">{ev.hall}</span>
+                    <span className="text-xs text-slate-400">{ev.event_date}</span>
+                  </div>
+                  <div className="text-slate-200">{ev.name}</div>
+                  <div className="text-xs text-slate-400">{ev.attendees} pax · {ev.event_type ?? "Tipo"}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       </section>
 
       <section className="bg-white/5 border border-white/10 rounded-xl p-6 space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold">Eventos importados</h2>
-          <span className="text-xs text-slate-400">CRUD completo pendiente de calendario (stub mensual)</span>
+          <span className="text-xs text-slate-400">Ordenados por fecha y salón</span>
         </div>
         <table className="w-full text-sm" aria-label="events-table">
           <thead className="text-slate-300">
@@ -346,7 +458,7 @@ export default function EventsPage() {
               <th className="text-left py-2">Fecha</th>
               <th className="text-left py-2">Menú</th>
               <th className="text-right py-2">Producción (raciones)</th>
-              <th className="text-right py-2">Compras (proveedor est.)</th>
+              <th className="text-right py-2">Compras (items)</th>
             </tr>
           </thead>
           <tbody>
@@ -358,7 +470,7 @@ export default function EventsPage() {
                 <td className="py-2">{row.event_date}</td>
                 <td className="py-2">{row.menu_name ?? "-"}</td>
                 <td className="py-2 text-right">{row.production_items ?? 0}</td>
-                <td className="py-2 text-right text-slate-300">Auto-calculada (stub)</td>
+                <td className="py-2 text-right">{row.purchases_items ?? 0}</td>
               </tr>
             ))}
           </tbody>
