@@ -46,14 +46,31 @@ export function listUpcomingEvents(daysAhead: number) {
   });
 }
 
-export function listEventSheets(event_date?: string, hall?: string | null) {
+export function listEventSheets(event_date?: string, hall?: string | null, aggregateByEvent = false) {
   const hallNorm = hall ? hall.trim().toUpperCase() : null;
-  return Array.from(store.values())
+  const filtered = Array.from(store.values())
     .filter((row) => (event_date ? row.event_date === event_date : true))
-    .filter((row) => (hallNorm ? row.hall.trim().toUpperCase() === hallNorm : true))
-    .map((row) => ({
+    .filter((row) => (hallNorm ? row.hall.trim().toUpperCase() === hallNorm : true));
+
+  if (aggregateByEvent) {
+    const byDate = new Map<string, { event_date: string; attendees: number; menu_name?: string | null }>();
+    for (const row of filtered) {
+      const agg = byDate.get(row.event_date) ?? { event_date: row.event_date, attendees: 0, menu_name: row.menu_name ?? null };
+      agg.attendees += row.attendees;
+      agg.menu_name = agg.menu_name || row.menu_name || null;
+      byDate.set(row.event_date, agg);
+    }
+    return Array.from(byDate.values()).map((row) => ({
       ...row,
+      hall: "TODOS",
       production_items: row.attendees,
-      purchases_items: row.attendees, // simple stub: 1 item per pax
+      purchases_items: row.attendees,
     }));
+  }
+
+  return filtered.map((row) => ({
+    ...row,
+    production_items: row.attendees,
+    purchases_items: row.attendees, // simple stub: 1 item per pax
+  }));
 }

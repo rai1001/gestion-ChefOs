@@ -163,12 +163,14 @@ export default function EventsPage() {
   }
 
   async function handleSheet() {
-    if (!selectedDate || !selectedEventHall) return;
+    if (!selectedDate) return;
+    if (!applyAllHalls && !selectedEventHall) return;
     setMessage("");
     setError("");
     setLoadingSheet(true);
     try {
-      const res = await fetch(`/api/events/${selectedDate}/sheets?hall=${encodeURIComponent(selectedEventHall)}`);
+      const hallParam = applyAllHalls ? "" : `?hall=${encodeURIComponent(selectedEventHall)}`;
+      const res = await fetch(`/api/events/${selectedDate}/sheets${hallParam}`);
       const json = await res.json();
       setSheet(json.data ?? []);
       setMessage("Hoja generada");
