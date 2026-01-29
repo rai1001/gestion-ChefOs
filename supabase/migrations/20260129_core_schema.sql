@@ -159,9 +159,9 @@ create table if not exists purchase_lines (
   org_id uuid references organizations(id) on delete cascade not null,
   order_id uuid references purchase_orders(id) on delete cascade,
   product_id uuid,
-  quantity numeric,
-  unit text,
-  price_cents integer,
+  quantity numeric not null default 0,
+  unit text not null default 'ud',
+  price_cents integer default 0,
   created_at timestamptz default now() not null
 );
 
@@ -355,3 +355,40 @@ drop trigger if exists trg_merma_alert on merma;
 create trigger trg_merma_alert
 after insert on merma
 for each row execute function trg_merma_alert();
+
+-- Expiry/stockout alerts on inventory lots
+create or replace function trg_inventory_lot_alert() returns trigger language plpgsql as $$
+begin
+  if new.expires_at is not null and new.expires_at <= (current_date + interval '1 day') then
+    perform create_alert(new.org_id, 'expiry', 'Lote a punto de caducar');
+  end if;
+  if new.quantity <= 0 then
+    perform create_alert(new.org_id, 'rotura', 'Rotura de stock');
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_inventory_lot_alert on inventory_lots;
+create trigger trg_inventory_lot_alert
+after insert or update on inventory_lots
+for each row execute function trg_inventory_lot_alert();
+
+-- Purchase order due alerts
+create or replace function trg_purchase_order_due() returns trigger language plpgsql as $$
+begin
+  if new.needed_by is not null and new.needed_by <= current_date and coalesce(new.status, 'draft') <> 'completed' then
+    perform create_alert(new.org_id, 'order_due', 'Pedido pendiente de recibir');
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_purchase_order_due on purchase_orders;
+create trigger trg_purchase_order_due
+after insert or update on purchase_orders
+for each row execute function trg_purchase_order_due();
+
+-- FK link labels -> inventory_lots when present
+alter table labels drop constraint if exists labels_lot_id_fkey;
+alter table labels add constraint labels_lot_id_fkey foreign key(lot_id) references inventory_lots(id) on delete set null;

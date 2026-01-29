@@ -52,7 +52,7 @@ Implementation:
 - [x] T017 [P] [US2] API `src/app/api/events/import/route.ts` mirroring forecast import with `event_imports`.
 - [x] T018 [US2] API `src/app/api/events/[id]/attach-menu/route.ts` (DB menu or file upload stub for OCR later).
 - [x] T019 [US2] API `src/app/api/events/[id]/sheets/route.ts` generating production & purchase sheets (ingredients, suppliers) using recipes.
-- [ ] T020 [US2] Migration updates for event_menu link + sheet views/materialized helpers.
+- [x] T020 [US2] Migration updates for event_menu link + sheet views/materialized helpers.
 
 ---
 
@@ -65,7 +65,7 @@ Implementation:
 - [x] T024 [P] [US3] APIs `src/app/api/tasks/route.ts`, `/tasks/[id]/start/route.ts`, `/tasks/[id]/finish/route.ts` enforcing state machine.
 - [x] T025 [US3] API `src/app/api/labels/route.ts` generating barcode via `jsbarcode`, storing in Supabase storage bucket, transactional lot insert.
 - [x] T026 [US3] UI `src/app/(app)/tasks/page.tsx` (responsive) showing shifts/tasks and label action (reuse in US7).
-- [ ] T027 [US3] Migration: task_logs, labels, inventory_lots relations, constraints.
+- [x] T027 [US3] Migration: task_logs, labels, inventory_lots relations, constraints.
 
 ---
 
@@ -80,7 +80,7 @@ Implementation:
 - [x] T033 [US4] UI `src/app/(app)/purchases/page.tsx` showing grouped suppliers + export.
 - [x] T034 [US4] APIs `src/app/api/receptions/route.ts`, `/receptions/[id]/lines/route.ts` handling upload, alerts, partial lots.
 - [x] T035 [US4] UI `src/app/(app)/receptions/page.tsx` discrepancy + alert view.
-- [ ] T036 [US4] Migration tweaks: purchase_orders/lines, receptions/lines, alerts triggers.
+- [x] T036 [US4] Migration tweaks: purchase_orders/lines, receptions/lines, alerts triggers.
 
 ---
 
@@ -92,7 +92,7 @@ Implementation:
 - [x] T039 [P] [US5] API `src/app/api/inventory/merma/route.ts` updating lot qty, logging merma.
 - [x] T040 [US5] Helper `src/lib/inventory/costing.ts` recomputing recipe/event costs + view refresh.
 - [x] T041 [US5] UI `src/app/(app)/inventory/page.tsx` (products, lots, merma actions).
-- [ ] T042 [US5] Migration: merma table, cost views, rotura/caducidad alert triggers.
+- [x] T042 [US5] Migration: merma table, cost views, rotura/caducidad alert triggers.
 
 ---
 
