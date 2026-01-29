@@ -13,48 +13,49 @@ export default function ForecastsPage() {
   const [rows, setRows] = useState<DeltaRow[]>([]);
   const [importing, setImporting] = useState(false);
   const [savingReal, setSavingReal] = useState(false);
+  const [resetting, setResetting] = useState(false);
   const [realDate, setRealDate] = useState("");
   const [realValue, setRealValue] = useState<number | "">("");
   const [message, setMessage] = useState<string>("");
-
-  const demoRows = [
-    { fecha: "2026-02-01", ocupacion: 150, desayunos: 140 },
-    { fecha: "2026-02-02", ocupacion: 120, desayunos: 110 },
-  ];
+  const [error, setError] = useState<string>("");
 
   useEffect(() => {
-    fetch("/api/forecasts/delta")
-      .then((r) => r.json())
-      .then((json) => setRows(json.data ?? []))
-      .catch(() => setRows([]));
+    refresh();
   }, []);
 
   async function refresh() {
-    const res = await fetch("/api/forecasts/delta");
-    const json = await res.json();
-    setRows(json.data ?? []);
+    try {
+      const res = await fetch("/api/forecasts/delta");
+      const json = await res.json();
+      setRows(json.data ?? []);
+    } catch {
+      setRows([]);
+    }
   }
 
   async function handleImport(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    setMessage("");
+    setError("");
     const input = e.currentTarget.file as unknown as HTMLInputElement;
     const file = input?.files?.[0];
+    if (!file) {
+      setError("Selecciona un archivo CSV o XLSX");
+      return;
+    }
     setImporting(true);
     try {
-      if (file) {
-        const form = new FormData();
-        form.append("file", file);
-        await fetch("/api/forecasts/import", { method: "POST", body: form });
-        setMessage("Importación desde Excel completada");
-      } else {
-        await fetch("/api/forecasts/import", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ rows: demoRows }),
-        });
-        setMessage("Demo cargada (usa archivo para reemplazar)");
+      const form = new FormData();
+      form.append("file", file);
+      const res = await fetch("/api/forecasts/import", { method: "POST", body: form });
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        throw new Error(j.error || "Error al importar");
       }
+      setMessage("Importación completada");
       await refresh();
+    } catch (err: any) {
+      setError(err?.message ?? "Error al importar");
     } finally {
       setImporting(false);
     }
@@ -62,18 +63,44 @@ export default function ForecastsPage() {
 
   async function handleSaveReal(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (!realDate || realValue === "") return;
+    setMessage("");
+    setError("");
+    if (!realDate || realValue === "") {
+      setError("Fecha y desayunos reales son obligatorios");
+      return;
+    }
     setSavingReal(true);
     try {
-      await fetch("/api/forecasts/real", {
+      const res = await fetch("/api/forecasts/real", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ forecast_date: realDate, breakfasts: Number(realValue), org_id: "org-dev" }),
+        body: JSON.stringify({ forecast_date: realDate, actual_breakfasts: Number(realValue), org_id: "org-dev" }),
       });
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        throw new Error(j.error || "Error al guardar real");
+      }
       setMessage("Real guardado");
       await refresh();
+    } catch (err: any) {
+      setError(err?.message ?? "Error al guardar real");
     } finally {
       setSavingReal(false);
+    }
+  }
+
+  async function handleReset() {
+    setMessage("");
+    setError("");
+    setResetting(true);
+    try {
+      await fetch("/api/forecasts/reset", { method: "POST" });
+      setMessage("Datos reseteados");
+      await refresh();
+    } catch (err: any) {
+      setError(err?.message ?? "Error al resetear");
+    } finally {
+      setResetting(false);
     }
   }
 
@@ -86,19 +113,29 @@ export default function ForecastsPage() {
       </header>
 
       <section className="bg-white/5 border border-white/10 rounded-xl p-6 space-y-4">
-        <h2 className="text-lg font-semibold">Importar Excel</h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold">Importar previsión (CSV/XLSX)</h2>
+          <button
+            type="button"
+            onClick={handleReset}
+            disabled={resetting}
+            className="rounded-md border border-white/15 px-3 py-1 text-sm hover:bg-white/10 disabled:opacity-60"
+          >
+            {resetting ? "Reseteando..." : "Reset datos"}
+          </button>
+        </div>
         <form className="space-y-3" aria-label="forecast-import-form" onSubmit={handleImport}>
-          <input aria-label="Archivo Excel" type="file" name="file" accept=".xlsx,.xls" className="text-sm" />
+          <input aria-label="Archivo previsión" name="file" type="file" accept=".xlsx,.xls,.csv" className="text-sm" />
           <div className="flex gap-3">
             <button
               type="submit"
               disabled={importing}
               className="rounded-lg bg-emerald-500 text-black font-semibold px-4 py-2 disabled:opacity-60"
             >
-              {importing ? "Importando..." : "Subir / usar demo"}
+              {importing ? "Importando..." : "Subir"}
             </button>
           </div>
-          <p className="text-xs text-slate-400">Si no seleccionas archivo, cargamos demo.</p>
+          <p className="text-xs text-slate-400">Reemplaza por fecha (no suma). Columnas requeridas: fecha, ocupacion, desayunos.</p>
         </form>
       </section>
 
@@ -138,6 +175,7 @@ export default function ForecastsPage() {
       <section className="bg-white/5 border border-white/10 rounded-xl p-6 space-y-3">
         <h2 className="text-lg font-semibold">Delta previsto vs real</h2>
         {message && <p className="text-xs text-emerald-200">{message}</p>}
+        {error && <p className="text-xs text-rose-300">{error}</p>}
         <table className="w-full text-sm" aria-label="forecast-delta-table">
           <thead className="text-slate-300">
             <tr>
