@@ -7,17 +7,68 @@ type AlertRow = { type: string; message: string; reception_id: string };
 export default function ReceptionsPage() {
   const [receptions, setReceptions] = useState<ReceptionRow[]>([]);
   const [alerts, setAlerts] = useState<AlertRow[]>([]);
+  const [newId, setNewId] = useState("PO-1001");
+  const [expected, setExpected] = useState<number | "">("");
+  const [recvId, setRecvId] = useState("");
+  const [recvQty, setRecvQty] = useState<number | "">("");
+  const [message, setMessage] = useState("");
+
+  async function refresh() {
+    const recRes = await fetch("/api/receptions");
+    const recJson = await recRes.json();
+    setReceptions(recJson.data ?? []);
+    const alRes = await fetch("/api/receptions/alerts");
+    const alJson = await alRes.json();
+    setAlerts(alJson.data ?? []);
+  }
 
 useEffect(() => {
-    fetch("/api/receptions")
-      .then((r) => r.json())
-      .then((json) => setReceptions(json.data ?? []))
-      .catch(() => setReceptions([]));
-    fetch("/api/receptions/alerts")
-      .then((r) => r.json())
-      .then((json) => setAlerts(json.data ?? []))
-      .catch(() => setAlerts([]));
+    refresh();
   }, []);
+
+  async function seedDemo() {
+    await fetch("/api/receptions", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ id: "PO-1001", expected_qty: 50, expected_date: "2026-02-01" }),
+    });
+    await fetch("/api/receptions", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ id: "PO-1002", expected_qty: 30, expected_date: "2026-02-02" }),
+    });
+    setMessage("Demo cargada: PO-1001/1002");
+    await refresh();
+  }
+
+  async function createReception() {
+    if (!expected || !newId) return;
+    await fetch("/api/receptions", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ id: newId, expected_qty: Number(expected), expected_date: new Date().toISOString().slice(0, 10) }),
+    });
+    setMessage(`Pedido ${newId} creado`);
+    await refresh();
+  }
+
+  async function receivePartial() {
+    if (!recvId || !recvQty) return;
+    await fetch(`/api/receptions/${recvId}/lines`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ qty: Number(recvQty), received_at: new Date().toISOString().slice(0, 10) }),
+    });
+    setMessage(`Recepción parcial ${recvId}`);
+    await refresh();
+  }
+
+  async function finalize() {
+    if (!recvId) return;
+    await fetch(`/api/receptions/${recvId}/lines`, { method: "PATCH" });
+    setMessage(`Finalizado ${recvId}`);
+    await refresh();
+  }
 
   return (
     <main className="min-h-screen bg-slate-950 text-white px-6 py-10 space-y-8">
@@ -29,6 +80,36 @@ useEffect(() => {
 
       <section className="bg-white/5 border border-white/10 rounded-xl p-6 space-y-4">
         <h2 className="text-lg font-semibold">Recepciones</h2>
+        <div className="flex flex-wrap gap-2 text-sm text-slate-200">
+          <button onClick={seedDemo} className="rounded-md border border-white/15 px-3 py-1 hover:bg-white/10">Cargar demo</button>
+          <button onClick={refresh} className="rounded-md border border-white/15 px-3 py-1 hover:bg-white/10">Recargar</button>
+          {message && <span className="text-emerald-200 text-xs">{message}</span>}
+        </div>
+        <div className="grid gap-3 md:grid-cols-3 text-sm">
+          <label className="flex flex-col gap-1">
+            ID pedido
+            <input value={newId} onChange={(e) => setNewId(e.target.value)} className="rounded bg-slate-900 border border-white/10 px-3 py-2" />
+          </label>
+          <label className="flex flex-col gap-1">
+            Cant. esperada
+            <input value={expected} onChange={(e) => setExpected(e.target.value === "" ? "" : Number(e.target.value))} type="number" className="rounded bg-slate-900 border border-white/10 px-3 py-2" />
+          </label>
+          <button onClick={createReception} className="md:self-end rounded-lg bg-emerald-500 text-black font-semibold px-4 py-2">Crear recepción</button>
+        </div>
+        <div className="grid gap-3 md:grid-cols-3 text-sm">
+          <label className="flex flex-col gap-1">
+            ID a recibir
+            <input value={recvId} onChange={(e) => setRecvId(e.target.value)} className="rounded bg-slate-900 border border-white/10 px-3 py-2" />
+          </label>
+          <label className="flex flex-col gap-1">
+            Qty recibida
+            <input value={recvQty} onChange={(e) => setRecvQty(e.target.value === "" ? "" : Number(e.target.value))} type="number" className="rounded bg-slate-900 border border-white/10 px-3 py-2" />
+          </label>
+          <div className="flex items-end gap-2">
+            <button onClick={receivePartial} className="rounded-lg bg-white/10 border border-white/10 px-4 py-2">Registrar parcial</button>
+            <button onClick={finalize} className="rounded-lg bg-white/10 border border-white/10 px-4 py-2">Finalizar</button>
+          </div>
+        </div>
         <table className="w-full text-sm" aria-label="receptions-table">
           <thead className="text-slate-300">
             <tr>

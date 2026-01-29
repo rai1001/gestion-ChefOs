@@ -27,6 +27,7 @@ export default function TasksPage() {
   const [selectedTask, setSelectedTask] = useState<string>("");
   const [expiresAt, setExpiresAt] = useState<string>("");
   const [message, setMessage] = useState<string>("");
+  const [newTaskTitle, setNewTaskTitle] = useState<string>("");
 
   const refresh = useCallback(async () => {
     const resTasks = await fetch("/api/tasks");
@@ -76,6 +77,17 @@ export default function TasksPage() {
     await fetch("/api/tasks", { method: "DELETE" });
     await refresh();
     setLoading(false);
+  }
+
+  async function handleCreateTask() {
+    if (!newTaskTitle.trim()) return;
+    await fetch("/api/tasks", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ title: newTaskTitle, org_id: "org-dev" }),
+    });
+    setNewTaskTitle("");
+    await refresh();
   }
 
   async function handleCreateLabel() {
@@ -133,6 +145,20 @@ export default function TasksPage() {
             <span className="text-xs px-2 py-1 rounded-full bg-emerald-500/20 text-emerald-200">
               {tasks.length} tareas
             </span>
+          </div>
+          <div className="grid gap-3 md:grid-cols-3 text-sm">
+            <label className="md:col-span-2 flex flex-col gap-1">
+              Nueva tarea
+              <input
+                value={newTaskTitle}
+                onChange={(e) => setNewTaskTitle(e.target.value)}
+                placeholder="Ej: Mise en place cena"
+                className="rounded bg-slate-900 border border-white/10 px-3 py-2"
+              />
+            </label>
+            <button onClick={handleCreateTask} className="md:self-end rounded-lg bg-emerald-500 text-black font-semibold px-4 py-2">
+              Añadir
+            </button>
           </div>
           <div className="divide-y divide-white/10">
             {tasks.length === 0 && <p className="text-sm text-slate-300 py-2">Sin tareas</p>}
