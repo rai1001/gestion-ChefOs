@@ -4,15 +4,14 @@ import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react
 interface EventRow {
   org_id: string;
   event_date: string;
+  hall: string;
+  name: string;
+  event_type?: string | null;
   attendees: number;
   menu_name?: string | null;
   production_items?: number;
+  purchases_items?: number;
 }
-
-const demoRows: EventRow[] = [
-  { org_id: "org-dev", event_date: "2026-02-01", attendees: 120, menu_name: "Buffet continental" },
-  { org_id: "org-dev", event_date: "2026-02-02", attendees: 80, menu_name: null },
-];
 
 export default function EventsPage() {
   const [rows, setRows] = useState<EventRow[]>([]);
@@ -23,11 +22,12 @@ export default function EventsPage() {
   const [importing, setImporting] = useState(false);
   const [attaching, setAttaching] = useState(false);
   const [loadingSheet, setLoadingSheet] = useState(false);
+  const [error, setError] = useState<string>("");
+  const [message, setMessage] = useState<string>("");
   const [monthCursor, setMonthCursor] = useState(() => {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1);
   });
-  const [message, setMessage] = useState<string>("");
 
   const sortedRows = useMemo(
     () => [...rows].sort((a, b) => (a.event_date < b.event_date ? -1 : 1)),
@@ -55,14 +55,12 @@ export default function EventsPage() {
       const res = await fetch("/api/events");
       const json = await res.json();
       const data = (json.data as EventRow[]) ?? [];
-      const nextRows = data.length === 0 ? demoRows : data;
-      setRows(nextRows);
-      if (!selectedDate && nextRows.length > 0) setSelectedDate(nextRows[0].event_date);
-      if (data.length === 0) setMessage("Usando datos demo; importa Excel para reemplazar.");
+      setRows(data);
+      if (!selectedDate && data.length > 0) setSelectedDate(data[0].event_date);
+      setMessage("");
     } catch {
-      setRows(demoRows);
-      if (!selectedDate) setSelectedDate(demoRows[0].event_date);
-      setMessage("Modo demo por error de red");
+      setRows([]);
+      setError("No se pudo cargar eventos");
     }
   }, [selectedDate]);
 
@@ -78,10 +76,12 @@ export default function EventsPage() {
 
   async function handleImport(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    setMessage("");
+    setError("");
     const input = e.currentTarget.file as unknown as HTMLInputElement;
     const file = input?.files?.[0];
     if (!file) {
-      await loadDemo();
+      setError("Selecciona un archivo Excel (.xlsx)");
       return;
     }
     setImporting(true);
@@ -89,22 +89,8 @@ export default function EventsPage() {
       await importFile(file);
       await refresh();
       setMessage("Eventos importados");
-    } finally {
-      setImporting(false);
-    }
-  }
-
-  async function loadDemo() {
-    setImporting(true);
-    try {
-      await fetch("/api/events/import", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ rows: demoRows }),
-      });
-      await refresh();
-      setSelectedDate(demoRows[0].event_date);
-      setMessage("Demo cargada");
+    } catch (err: any) {
+      setError(err?.message ?? "Error al importar");
     } finally {
       setImporting(false);
     }
@@ -112,6 +98,8 @@ export default function EventsPage() {
 
   async function handleAttach() {
     if (!selectedDate) return;
+    setMessage("");
+    setError("");
     setAttaching(true);
     try {
       await fetch(`/api/events/${selectedDate}/attach-menu`, {
@@ -121,6 +109,8 @@ export default function EventsPage() {
       });
       await refresh();
       setMessage("Menú adjunto");
+    } catch (err: any) {
+      setError(err?.message ?? "Error al adjuntar");
     } finally {
       setAttaching(false);
     }
@@ -128,12 +118,16 @@ export default function EventsPage() {
 
   async function handleSheet() {
     if (!selectedDate) return;
+    setMessage("");
+    setError("");
     setLoadingSheet(true);
     try {
       const res = await fetch(`/api/events/${selectedDate}/sheets`);
       const json = await res.json();
       setSheet(json.data ?? []);
       setMessage("Hoja generada");
+    } catch (err: any) {
+      setError(err?.message ?? "Error al generar hoja");
     } finally {
       setLoadingSheet(false);
     }
@@ -147,20 +141,13 @@ export default function EventsPage() {
         <p className="text-slate-300">
           Idempotente por fecha: reimportar reemplaza. Adjunta menú (BD o archivo) y genera hoja de producción/compras.
         </p>
+        {message && <p className="text-xs text-emerald-200">{message}</p>}
+        {error && <p className="text-xs text-rose-300">{error}</p>}
       </header>
 
       <div className="grid gap-4 lg:grid-cols-2">
         <section className="bg-white/5 border border-white/10 rounded-xl p-6 space-y-4">
-          <div className="flex items-center justify-between gap-2">
-            <h2 className="text-lg font-semibold">Importar eventos (Excel)</h2>
-            <button
-              type="button"
-              onClick={loadDemo}
-              className="rounded-lg border border-white/20 px-3 py-1 text-xs text-slate-200 hover:bg-white/5"
-            >
-              Cargar demo
-            </button>
-          </div>
+          <h2 className="text-lg font-semibold">Importar eventos (Excel)</h2>
           <form className="space-y-3" aria-label="events-import-form" onSubmit={handleImport}>
             <input aria-label="Archivo Eventos" name="file" type="file" accept=".xlsx,.xls" className="text-sm" />
             <div className="flex gap-3">
@@ -315,6 +302,8 @@ export default function EventsPage() {
           <thead className="text-slate-300">
             <tr>
               <th className="text-left py-2">Fecha</th>
+              <th className="text-left py-2">Salón</th>
+              <th className="text-left py-2">Evento</th>
               <th className="text-right py-2">Asistentes</th>
               <th className="text-left py-2">Menú</th>
               <th className="text-right py-2">Producción</th>
@@ -326,8 +315,10 @@ export default function EventsPage() {
               <tr><td className="py-2" colSpan={5}>Sin datos</td></tr>
             )}
             {sortedRows.map((row) => (
-              <tr key={row.org_id + row.event_date} data-testid="event-row" className="hover:bg-white/5">
+              <tr key={row.org_id + row.event_date + row.hall} data-testid="event-row" className="hover:bg-white/5">
                 <td className="py-2">{row.event_date}</td>
+                <td className="py-2">{row.hall}</td>
+                <td className="py-2">{row.name} {row.event_type ? `(${row.event_type})` : ""}</td>
                 <td className="py-2 text-right">{row.attendees}</td>
                 <td className="py-2 text-left">{row.menu_name ?? "-"}</td>
                 <td className="py-2 text-right">{row.production_items ?? "—"}</td>
