@@ -67,6 +67,8 @@ export function createLabel(opts: { org_id: string; task_id: string; expires_at:
     id: lot_id,
     org_id: opts.org_id,
     product_id: opts.product_id,
+    quantity: 1,
+    unit: "ud",
     expires_at: opts.expires_at,
     label_id,
   });
