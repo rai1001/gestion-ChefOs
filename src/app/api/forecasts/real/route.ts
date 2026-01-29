@@ -8,7 +8,7 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const { org_id, forecast_date, actual_breakfasts } = body;
-    if (!forecast_date || actual_breakfasts === undefined) {
+    if (!forecast_date || actual_breakfasts === undefined || actual_breakfasts === null) {
       return NextResponse.json({ error: "missing fields" }, { status: 400 });
     }
 

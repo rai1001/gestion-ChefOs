@@ -13,8 +13,10 @@ export function hashBuffer(buf: Buffer): string {
   return crypto.createHash("sha256").update(buf).digest("hex");
 }
 
-export function parseForecastXlsx(buf: Buffer): ForecastRow[] {
-  const workbook = XLSX.read(buf, { type: "buffer" });
+export function parseForecastXlsx(buf: Buffer, isCsv = false): ForecastRow[] {
+  const workbook = isCsv
+    ? XLSX.read(buf.toString("utf8"), { type: "string" })
+    : XLSX.read(buf, { type: "buffer" });
   const sheetName = workbook.SheetNames[0];
   const sheet = workbook.Sheets[sheetName];
   const json = XLSX.utils.sheet_to_json<Record<string, any>>(sheet, { defval: null });

@@ -15,7 +15,7 @@ export function resetStore() {
 export function upsertEntries(rows: ForecastEntry[]) {
   for (const row of rows) {
     const key = `${row.org_id}-${row.forecast_date}`;
-    store.set(key, { ...store.get(key), ...row });
+    store.set(key, { org_id: row.org_id, forecast_date: row.forecast_date, guests: row.guests, breakfasts: row.breakfasts, actual_breakfasts: row.actual_breakfasts });
   }
 }
 
@@ -31,4 +31,8 @@ export function listDelta() {
     actual_breakfasts: row.actual_breakfasts ?? 0,
     delta: (row.actual_breakfasts ?? 0) - row.breakfasts,
   }));
+}
+
+export function listEntries() {
+  return Array.from(store.values());
 }
