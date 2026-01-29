@@ -217,7 +217,9 @@ create index if not exists idx_tasks_org on tasks(org_id);
 create index if not exists idx_labels_org on labels(org_id);
 create index if not exists idx_inventory_lots_org on inventory_lots(org_id);
 create index if not exists idx_purchase_orders_org on purchase_orders(org_id);
+create index if not exists idx_purchase_lines_order on purchase_lines(order_id);
 create index if not exists idx_receptions_org on receptions(org_id);
+create index if not exists idx_reception_lines_reception on reception_lines(reception_id);
 
 -- RLS enablement
 alter default privileges in schema public revoke all on tables from public;
@@ -229,6 +231,15 @@ alter table event_imports enable row level security;
 alter table tasks enable row level security;
 alter table inventory_lots enable row level security;
 alter table alerts enable row level security;
+alter table purchase_orders enable row level security;
+alter table purchase_lines enable row level security;
+alter table receptions enable row level security;
+alter table reception_lines enable row level security;
+alter table suppliers enable row level security;
+alter table products enable row level security;
+alter table employees enable row level security;
+alter table shifts enable row level security;
+alter table shift_assignments enable row level security;
 
 -- Org isolation policies
 create policy if not exists org_isolation_forecasts on forecasts using (org_id = current_setting('request.jwt.claims'::text)::json->>'org_id');
@@ -238,6 +249,15 @@ create policy if not exists org_isolation_event_imports on event_imports using (
 create policy if not exists org_isolation_tasks on tasks using (org_id = current_setting('request.jwt.claims'::text)::json->>'org_id');
 create policy if not exists org_isolation_inventory on inventory_lots using (org_id = current_setting('request.jwt.claims'::text)::json->>'org_id');
 create policy if not exists org_isolation_alerts on alerts using (org_id = current_setting('request.jwt.claims'::text)::json->>'org_id');
+create policy if not exists org_isolation_purchase_orders on purchase_orders using (org_id = current_setting('request.jwt.claims'::text)::json->>'org_id');
+create policy if not exists org_isolation_purchase_lines on purchase_lines using (org_id = current_setting('request.jwt.claims'::text)::json->>'org_id');
+create policy if not exists org_isolation_receptions on receptions using (org_id = current_setting('request.jwt.claims'::text)::json->>'org_id');
+create policy if not exists org_isolation_reception_lines on reception_lines using (org_id = current_setting('request.jwt.claims'::text)::json->>'org_id');
+create policy if not exists org_isolation_suppliers on suppliers using (org_id = current_setting('request.jwt.claims'::text)::json->>'org_id');
+create policy if not exists org_isolation_products on products using (org_id = current_setting('request.jwt.claims'::text)::json->>'org_id');
+create policy if not exists org_isolation_employees on employees using (org_id = current_setting('request.jwt.claims'::text)::json->>'org_id');
+create policy if not exists org_isolation_shifts on shifts using (org_id = current_setting('request.jwt.claims'::text)::json->>'org_id');
+create policy if not exists org_isolation_shift_assignments on shift_assignments using (org_id = current_setting('request.jwt.claims'::text)::json->>'org_id');
 
 -- Role checks (planner/coordinator/chef/buyer/admin/employee)
 create policy if not exists role_planner_forecasts on forecasts for select using ((current_setting('request.jwt.claims'::text)::json->>'role') = 'planner');
