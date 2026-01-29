@@ -4,7 +4,7 @@ import { getSupabaseConfig } from "./lib/config";
 
 const PUBLIC_ROUTES = ["/", "/login", "/auth/callback"];
 
-export async function middleware(req: NextRequest) {
+export default async function proxy(req: NextRequest) {
   const res = NextResponse.next();
   const isE2E = process.env.NEXT_PUBLIC_E2E === "1" || process.env.E2E === "1";
   if (isE2E) return res;
