@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 
 type ReceptionRow = { id: string; expected_qty: number; received_qty: number; status: string };
 type AlertRow = { type: string; message: string; reception_id: string };
@@ -13,20 +13,7 @@ export default function ReceptionsPage() {
   const [recvQty, setRecvQty] = useState<number | "">("");
   const [message, setMessage] = useState("");
 
-  async function refresh() {
-    const recRes = await fetch("/api/receptions");
-    const recJson = await recRes.json();
-    setReceptions(recJson.data ?? []);
-    const alRes = await fetch("/api/receptions/alerts");
-    const alJson = await alRes.json();
-    setAlerts(alJson.data ?? []);
-  }
-
-useEffect(() => {
-    refresh();
-  }, []);
-
-  async function seedDemo() {
+  const seedDemo = useCallback(async () => {
     await fetch("/api/receptions", {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -38,8 +25,28 @@ useEffect(() => {
       body: JSON.stringify({ id: "PO-1002", expected_qty: 30, expected_date: "2026-02-02" }),
     });
     setMessage("Demo cargada: PO-1001/1002");
-    await refresh();
-  }
+  }, []);
+
+  const refresh = useCallback(
+    async (allowSeed = true) => {
+      const recRes = await fetch("/api/receptions");
+      const recJson = await recRes.json();
+      const recs: ReceptionRow[] = recJson.data ?? [];
+      if (allowSeed && recs.length === 0) {
+        await seedDemo();
+        return refresh(false);
+      }
+      setReceptions(recs);
+      const alRes = await fetch("/api/receptions/alerts");
+      const alJson = await alRes.json();
+      setAlerts(alJson.data ?? []);
+    },
+    [seedDemo],
+  );
+
+useEffect(() => {
+    refresh();
+  }, [refresh]);
 
   async function createReception() {
     if (!expected || !newId) return;
