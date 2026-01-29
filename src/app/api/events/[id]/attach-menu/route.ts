@@ -3,11 +3,11 @@ import { attachMenu } from "@/lib/events/store";
 
 const isE2E = process.env.NEXT_PUBLIC_E2E === "1" || process.env.E2E === "1";
 
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const body = await req.json();
     const { menu_name } = body;
-    const eventDate = params.id; // using date as id for e2e stub
+    const { id: eventDate } = await params; // using date as id for e2e stub
     const orgId = body.org_id || "org-dev";
 
     if (isE2E) {
