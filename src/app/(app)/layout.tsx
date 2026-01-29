@@ -12,6 +12,7 @@ const navItems = [
   { href: "/inventory", label: "Inventario", badge: "P2" },
   { href: "/tasks", label: "Tareas", badge: "P2" },
   { href: "/dashboards", label: "Dashboards", badge: "P2" },
+  { href: "/menus", label: "Menús/Escandallos", badge: "P2" },
   { href: "/mobile/turnos", label: "Turnos móvil", badge: "P3" },
 ];
 
