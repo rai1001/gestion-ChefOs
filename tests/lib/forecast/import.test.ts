@@ -8,7 +8,7 @@ vi.mock("@/lib/supabase/client", () => ({
   supabaseClient: () => ({ from }),
 }));
 
-import { parseForecastXlsx, upsertForecastsFromXlsx, upsertForecasts } from "@/lib/forecast/import";
+import { upsertForecastsFromXlsx, upsertForecasts } from "@/lib/forecast/import";
 
 describe("forecast import", () => {
   it("adds org_id and uses onConflict for idempotency", async () => {

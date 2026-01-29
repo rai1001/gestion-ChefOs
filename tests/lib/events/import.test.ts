@@ -7,7 +7,7 @@ vi.mock("@/lib/supabase/client", () => ({
   supabaseClient: () => ({ from }),
 }));
 
-import { upsertEventsFromXlsx, parseEventsXlsx, upsertEvents } from "@/lib/events/import";
+import { upsertEventsFromXlsx, upsertEvents } from "@/lib/events/import";
 import * as XLSX from "xlsx";
 
 describe("events import", () => {
