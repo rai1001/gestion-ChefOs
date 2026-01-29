@@ -113,7 +113,7 @@ Tests first:
 Implementation:
 - [x] T049 [P] [US7] API `src/app/api/turnos/route.ts` CRUD for shifts/assignments honoring vacations/bajas.
 - [x] T050 [US7] UI `src/app/(app)/mobile/turnos/page.tsx` responsive list; reuse task actions; offline caching optional.
-- [ ] T051 [US7] Adjust `src/app/(app)/tasks/page.tsx` shared responsive styles.
+- [x] T051 [US7] Adjust `src/app/(app)/tasks/page.tsx` shared responsive styles.
 - [x] T052 [US7] Migration additions: employees, shifts, assignments, vacations/bajas.
 
 ---
