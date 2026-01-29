@@ -111,10 +111,19 @@ create table if not exists inventory_lots (
   id uuid primary key default gen_random_uuid(),
   org_id uuid references organizations(id) on delete cascade not null,
   product_id uuid,
-  quantity numeric not null,
-  unit text not null,
+  quantity numeric not null default 0,
+  unit text not null default 'ud',
   expires_at date,
   label_id uuid,
+  created_at timestamptz default now() not null
+);
+
+create table if not exists merma (
+  id uuid primary key default gen_random_uuid(),
+  org_id uuid references organizations(id) on delete cascade not null,
+  lot_id uuid references inventory_lots(id) on delete cascade,
+  quantity numeric not null,
+  reason text,
   created_at timestamptz default now() not null
 );
 
@@ -240,6 +249,7 @@ alter table products enable row level security;
 alter table employees enable row level security;
 alter table shifts enable row level security;
 alter table shift_assignments enable row level security;
+alter table merma enable row level security;
 
 -- Org isolation policies
 create policy if not exists org_isolation_forecasts on forecasts using (org_id = current_setting('request.jwt.claims'::text)::json->>'org_id');
@@ -258,6 +268,7 @@ create policy if not exists org_isolation_products on products using (org_id = c
 create policy if not exists org_isolation_employees on employees using (org_id = current_setting('request.jwt.claims'::text)::json->>'org_id');
 create policy if not exists org_isolation_shifts on shifts using (org_id = current_setting('request.jwt.claims'::text)::json->>'org_id');
 create policy if not exists org_isolation_shift_assignments on shift_assignments using (org_id = current_setting('request.jwt.claims'::text)::json->>'org_id');
+create policy if not exists org_isolation_merma on merma using (org_id = current_setting('request.jwt.claims'::text)::json->>'org_id');
 
 -- Role checks (planner/coordinator/chef/buyer/admin/employee)
 create policy if not exists role_planner_forecasts on forecasts for select using ((current_setting('request.jwt.claims'::text)::json->>'role') = 'planner');
