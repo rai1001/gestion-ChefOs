@@ -29,64 +29,64 @@ export default function TasksPage() {
   }, []);
 
   return (
-    <main className="min-h-screen bg-slate-950 text-white px-6 py-10 space-y-8">
+    <main className="min-h-screen bg-slate-950 text-white px-4 md:px-8 py-10 space-y-8">
       <header className="space-y-2">
         <p className="text-xs uppercase tracking-[0.2em] text-emerald-300">Producción</p>
-        <h1 className="text-3xl font-semibold">Producción y etiquetas</h1>
+        <h1 className="text-3xl md:text-4xl font-semibold">Producción y etiquetas</h1>
         <p className="text-slate-300">Tareas de mise en place y etiquetas con lote.</p>
       </header>
 
-      <section className="bg-white/5 border border-white/10 rounded-xl p-6 space-y-4">
-        <h2 className="text-lg font-semibold">Turnos y tareas</h2>
-        <table className="w-full text-sm" aria-label="tasks-table">
-          <thead className="text-slate-300">
-            <tr>
-              <th className="text-left py-2">Tarea</th>
-              <th className="text-left py-2">Estado</th>
-            </tr>
-          </thead>
-          <tbody>
-            {tasks.length === 0 && (
-              <tr>
-                <td className="py-2" colSpan={2}>Sin tareas</td>
-              </tr>
-            )}
+      <div className="grid gap-6 lg:grid-cols-2">
+        <section className="bg-white/5 border border-white/10 rounded-xl p-6 space-y-4">
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="text-lg font-semibold">Turnos y tareas</h2>
+            <span className="text-xs px-2 py-1 rounded-full bg-emerald-500/20 text-emerald-200">
+              {tasks.length} tareas
+            </span>
+          </div>
+          <div className="divide-y divide-white/10">
+            {tasks.length === 0 && <p className="text-sm text-slate-300 py-2">Sin tareas</p>}
             {tasks.map((task) => (
-              <tr key={task.id} data-testid="task-row">
-                <td className="py-2">{task.title}</td>
-                <td className="py-2">{task.status}</td>
-              </tr>
+              <div key={task.id} data-testid="task-row" className="py-3 flex items-center justify-between">
+                <div>
+                  <p className="font-semibold">{task.title}</p>
+                  <p className="text-xs text-slate-400">ID: {task.id}</p>
+                </div>
+                <span
+                  className={`text-xs px-2 py-1 rounded-full ${
+                    task.status === "done"
+                      ? "bg-emerald-500/20 text-emerald-200"
+                      : task.status === "in_progress"
+                      ? "bg-amber-500/20 text-amber-200"
+                      : "bg-white/10 text-white"
+                  }`}
+                >
+                  {task.status}
+                </span>
+              </div>
             ))}
-          </tbody>
-        </table>
-      </section>
+          </div>
+        </section>
 
-      <section className="bg-white/5 border border-white/10 rounded-xl p-6 space-y-4">
-        <h2 className="text-lg font-semibold">Etiquetas e inventario</h2>
-        <table className="w-full text-sm" aria-label="lots-table">
-          <thead className="text-slate-300">
-            <tr>
-              <th className="text-left py-2">Lote</th>
-              <th className="text-left py-2">Etiqueta</th>
-              <th className="text-left py-2">Caduca</th>
-            </tr>
-          </thead>
-          <tbody>
-            {lots.length === 0 && (
-              <tr>
-                <td className="py-2" colSpan={3}>Sin etiquetas</td>
-              </tr>
-            )}
+        <section className="bg-white/5 border border-white/10 rounded-xl p-6 space-y-4">
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="text-lg font-semibold">Etiquetas e inventario</h2>
+            <span className="text-xs px-2 py-1 rounded-full bg-sky-500/20 text-sky-200">
+              {lots.length} lotes
+            </span>
+          </div>
+          <div className="divide-y divide-white/10">
+            {lots.length === 0 && <p className="text-sm text-slate-300 py-2">Sin etiquetas</p>}
             {lots.map((lot) => (
-              <tr key={lot.id} data-testid="lot-row">
-                <td className="py-2">{lot.id}</td>
-                <td className="py-2">{lot.label_id}</td>
-                <td className="py-2">{lot.expires_at}</td>
-              </tr>
+              <div key={lot.id} data-testid="lot-row" className="py-3">
+                <p className="font-semibold">{lot.label_id}</p>
+                <p className="text-xs text-slate-400">Lote: {lot.id}</p>
+                <p className="text-xs text-slate-300">Caduca: {lot.expires_at}</p>
+              </div>
             ))}
-          </tbody>
-        </table>
-      </section>
+          </div>
+        </section>
+      </div>
     </main>
   );
 }
