@@ -25,6 +25,7 @@ export default function EventsPage() {
   const [rows, setRows] = useState<EventRow[]>([]);
   const [selectedDate, setSelectedDate] = useState<string>("");
   const [selectedEventHall, setSelectedEventHall] = useState<string>("");
+  const [applyAllHalls, setApplyAllHalls] = useState<boolean>(true);
   const [menuSource, setMenuSource] = useState<"bd" | "archivo">("bd");
   const [menu, setMenu] = useState<string>("Buffet continental");
   const [sheet, setSheet] = useState<EventRow[]>([]);
@@ -138,7 +139,7 @@ export default function EventsPage() {
   }
 
   async function handleAttach() {
-    if (!selectedDate || !selectedEventHall) return;
+    if (!selectedDate || (!applyAllHalls && !selectedEventHall)) return;
     setMessage("");
     setError("");
     setAttaching(true);
@@ -146,7 +147,11 @@ export default function EventsPage() {
       await fetch(`/api/events/${selectedDate}/attach-menu`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ menu_name: menu, org_id: "org-dev", hall: selectedEventHall }),
+        body: JSON.stringify({
+          menu_name: menu,
+          org_id: "org-dev",
+          hall: applyAllHalls ? null : selectedEventHall,
+        }),
       });
       await refresh();
       setMessage("Menú adjunto");
@@ -237,16 +242,29 @@ export default function EventsPage() {
               Salón seleccionado
               <select
                 value={selectedEventHall}
-                onChange={(e) => setSelectedEventHall(e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setSelectedEventHall(val);
+                  setApplyAllHalls(val === "ALL");
+                }}
                 className="rounded bg-slate-900 border border-white/10 px-3 py-2"
               >
-                <option value="">Elige salón</option>
+                <option value="ALL">Todos los salones del día</option>
                 {(eventsByDay.get(selectedDate) ?? []).map((ev) => (
                   <option key={ev.hall} value={ev.hall}>
                     {ev.hall}
                   </option>
                 ))}
               </select>
+              <label className="flex items-center gap-2 text-xs text-slate-400 mt-1">
+                <input
+                  type="checkbox"
+                  checked={applyAllHalls}
+                  onChange={(e) => setApplyAllHalls(e.target.checked)}
+                  className="accent-emerald-500"
+                />
+                Aplicar a todos los salones de esa fecha (un mismo evento repartido).
+              </label>
             </label>
             <label className="text-sm text-slate-300 flex flex-col gap-1">
               Origen menú
@@ -290,10 +308,10 @@ export default function EventsPage() {
             <button
               type="button"
               onClick={handleAttach}
-              disabled={attaching || !selectedDate || !selectedEventHall}
+              disabled={attaching || !selectedDate || (!applyAllHalls && !selectedEventHall)}
               className="rounded-lg bg-emerald-500 text-black font-semibold px-4 py-2 disabled:opacity-60"
             >
-              {attaching ? "Adjuntando..." : "Adjuntar menú (fecha completa)"}
+              {attaching ? "Adjuntando..." : applyAllHalls ? "Adjuntar menú a todos" : "Adjuntar solo a salón"}
             </button>
             <button
               type="button"
