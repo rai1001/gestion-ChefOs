@@ -17,6 +17,13 @@
 - Trazabilidad de inventario por lote, etiqueta y caducidad; consumo registrado desde recetas/eventos/producción.  
 - Alertas: faltantes en recepción vs pedido, retrasos, caducidad próxima, roturas de stock.
 
+### III.b Extensiones de dominio (enero 2026)
+- Previsión de ocupación: importar XLSX/CSV diarios (cols: fecha, desayunos); cada fecha se sobrescribe, no se acumula; permitir edición manual de desayunos reales; el dashboard muestra los próximos 7 días.  
+- Eventos: importar Excel trimestral tipo matriz (fila 1 salones, col A días; celdas "Nombre | Tipo | PAX"); clave idempotente por fecha+salón, un evento en varios salones se consolida sin duplicar; vista mensual y lista de próximos eventos; al seleccionar evento se puede adjuntar menú (base de datos u OCR) y generar hojas de compras y producción.  
+- Compras/producción: las hojas usan recetas asociadas al menú y el pax del evento; productos bloqueados si ya hay stock en inventario; proveedores con fecha comprometida y notas.  
+- UX: no usar datos de demo en entornos productivos; estados vacíos siempre dejan acción disponible (importar, crear, adjuntar).  
+- Observabilidad: cada importación registra import_id y conteos procesados/omitidos en logs.
+
 ### IV. Performance y fiabilidad
 - Consultas sobre vistas/materializadas para dashboards; paginación/filtrado en server.  
 - Degradación aceptable en móvil; respuestas server-side priorizadas.  
@@ -43,4 +50,3 @@
 - Esta constitución prima sobre otras guías locales.  
 - Cambios requieren documento de enmienda y acuerdo del responsable de dominio.  
 - Toda revisión debe validar cumplimiento de estos principios y restricciones.
-
