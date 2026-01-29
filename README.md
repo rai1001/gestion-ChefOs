@@ -1,36 +1,33 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Cocina Hotels Core
 
-## Getting Started
+Next.js (App Router) + Supabase SSR. P1 features: previsión desayunos, eventos, producción con etiquetas, compras/recepción, inventario/merma, alertas stubs.
 
-First, run the development server:
+## Requisitos
+- Node 20+, Corepack habilitado (`npm i -g corepack` si no lo tienes).
+- Variables Supabase en `.env.local` o en entorno:
+  - `NEXT_PUBLIC_SUPABASE_URL`
+  - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+  - (Server) `SUPABASE_SERVICE_ROLE` si se usan funciones de servicio.
+- Para modo E2E/local stub: `NEXT_PUBLIC_E2E=1` y `E2E=1` (omite Supabase; usa stores en memoria).
 
+## Scripts clave
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+corepack pnpm dev                 # arranca Next
+corepack pnpm vitest              # unit tests
+NEXT_PUBLIC_E2E=1 E2E=1 corepack pnpm playwright test --project=chromium  # e2e stubs
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Rutas principales
+- UI: `/forecasts`, `/events`, `/tasks`, `/purchases`, `/receptions`, `/inventory`
+- API: ver `docs/api-contracts.md`
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Migraciones/seguridad
+- Esquema en `supabase/migrations/20260129_core_schema.sql` con RLS por `org_id`, políticas por rol y triggers de alertas (retraso/shortage, merma, caducidad/rotura, pedido vencido).
+- Storage buckets esperados (crear vía CLI): `labels`, `albaranes` (privados).
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Performance budgets
+Ver `docs/perf-budgets.md` (imports <30s, dashboards <3s, alertas <1m).
 
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Estado de test actual
+- Vitest: pasa todo (24 tests).
+- Playwright stub: `tests/e2e/smoke.spec.ts` y flujos compras/recepciones/merma pasan con `NEXT_PUBLIC_E2E=1 E2E=1`.
