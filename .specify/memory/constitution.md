@@ -1,50 +1,46 @@
-# [PROJECT_NAME] Constitution
-<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
+# Cocina Hotels SaaS Constitution
 
 ## Core Principles
 
-### [PRINCIPLE_1_NAME]
-<!-- Example: I. Library-First -->
-[PRINCIPLE_1_DESCRIPTION]
-<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
+### I. Calidad y testing pragmático
+- Cobertura mínima: unidades para lógica de negocio y utilidades; integración para endpoints críticos; smoke E2E para flujos principales (previsión, eventos, compras/recepción, producción, inventario).  
+- TDD donde haya reglas de negocio (idempotencia de importaciones, cálculo de mise en place, cotejo pedido vs albarán).  
+- No se despliega funcionalidad sin chequeos automatizados básicos.
 
-### [PRINCIPLE_2_NAME]
-<!-- Example: II. CLI Interface -->
-[PRINCIPLE_2_DESCRIPTION]
-<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
+### II. Seguridad y datos
+- Supabase con RLS por rol (admin, chef, sala, staff móvil) y por sede/hotel.  
+- Mínimo PII; logs sin datos sensibles; credenciales y tokens fuera del repo.  
+- RBAC aplicado en server actions/route handlers y en SQL/RPC.
 
-### [PRINCIPLE_3_NAME]
-<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
-[PRINCIPLE_3_DESCRIPTION]
-<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
+### III. Dominio y trazabilidad
+- Idempotencia en importaciones (previsión, eventos, menús/recetas): última carga del día reemplaza, no suma.  
+- Trazabilidad de inventario por lote, etiqueta y caducidad; consumo registrado desde recetas/eventos/producción.  
+- Alertas: faltantes en recepción vs pedido, retrasos, caducidad próxima, roturas de stock.
 
-### [PRINCIPLE_4_NAME]
-<!-- Example: IV. Integration Testing -->
-[PRINCIPLE_4_DESCRIPTION]
-<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
+### IV. Performance y fiabilidad
+- Consultas sobre vistas/materializadas para dashboards; paginación/filtrado en server.  
+- Degradación aceptable en móvil; respuestas server-side priorizadas.  
+- Backoff y reintentos para importaciones y escritura en Supabase.
 
-### [PRINCIPLE_5_NAME]
-<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
-[PRINCIPLE_5_DESCRIPTION]
-<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
+### V. Observabilidad y simplicidad
+- Logging estructurado en server actions; IDs de correlación por importación/evento.  
+- Métricas básicas: tiempos de import, ratio fallos, alertas generadas, uso por módulo.  
+- Preferir soluciones simples (supabase-js) antes que añadir capas extra; añadir Drizzle solo si el tipado lo exige.
 
-## [SECTION_2_NAME]
-<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
+## Requisitos y restricciones
+- Stack: Next.js 14 (App Router) + TS + Tailwind; supabase-js sin Drizzle; deploy Vercel; Supabase Postgres/Auth/Storage.  
+- OCR: placeholder inicialmente; integración futura (Tesseract/servicio externo).  
+- Mobile-first para personal de cocina/sala.  
+- Importaciones Excel diarias (previsión, eventos) idempotentes; se almacena “versión de importación” por fecha.
 
-[SECTION_2_CONTENT]
-<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
+## Flujo de desarrollo y calidad
+- Uso de slash commands: `/speckit.constitution`, `/speckit.specify`, `/speckit.plan`, `/speckit.tasks`, `/speckit.implement`; opcionales `/speckit.clarify`, `/speckit.analyze`, `/speckit.checklist`.  
+- Branches por feature; PR con revisión y checklist de principios.  
+- Lint/format/test antes de merge.  
+- Migraciones/SQL versionadas; cambios de esquema requieren compatibilidad o migración clara.
 
-## [SECTION_3_NAME]
-<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
+## Gobernanza
+- Esta constitución prima sobre otras guías locales.  
+- Cambios requieren documento de enmienda y acuerdo del responsable de dominio.  
+- Toda revisión debe validar cumplimiento de estos principios y restricciones.
 
-[SECTION_3_CONTENT]
-<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
-
-## Governance
-<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
-
-[GOVERNANCE_RULES]
-<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
-
-**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
-<!-- Example: Version: 2.1.1 | Ratified: 2025-06-13 | Last Amended: 2025-07-16 -->
