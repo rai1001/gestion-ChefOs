@@ -86,10 +86,16 @@ export default function EventsPage() {
       const data = (json.data as EventRow[]) ?? [];
       setRows(data);
       if (!selectedDate && data.length > 0) {
+        const byDay = data.reduce<Record<string, EventRow[]>>((acc, r) => {
+          const list = acc[r.event_date] ?? [];
+          list.push(r);
+          acc[r.event_date] = list;
+          return acc;
+        }, {});
         const todayIso = new Date().toISOString().slice(0, 10);
-        const pick = eventsByDay.get(todayIso)?.length ? todayIso : data[0].event_date;
+        const pick = byDay[todayIso]?.length ? todayIso : data[0].event_date;
         setSelectedDate(pick);
-        const firstHall = eventsByDay.get(pick)?.[0]?.hall ?? "";
+        const firstHall = (byDay[pick] ?? [])[0]?.hall ?? "";
         setSelectedEventHall(firstHall);
       }
       setMessage("");
@@ -97,7 +103,7 @@ export default function EventsPage() {
       setRows([]);
       setError("No se pudo cargar eventos");
     }
-  }, [selectedDate, eventsByDay]);
+  }, [selectedDate]);
 
   useEffect(() => {
     refresh();
@@ -132,7 +138,7 @@ export default function EventsPage() {
   }
 
   async function handleAttach() {
-    if (!selectedDate) return;
+    if (!selectedDate || !selectedEventHall) return;
     setMessage("");
     setError("");
     setAttaching(true);
@@ -140,7 +146,7 @@ export default function EventsPage() {
       await fetch(`/api/events/${selectedDate}/attach-menu`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ menu_name: menu, org_id: "org-dev" }),
+        body: JSON.stringify({ menu_name: menu, org_id: "org-dev", hall: selectedEventHall }),
       });
       await refresh();
       setMessage("Menú adjunto");
@@ -152,12 +158,12 @@ export default function EventsPage() {
   }
 
   async function handleSheet() {
-    if (!selectedDate) return;
+    if (!selectedDate || !selectedEventHall) return;
     setMessage("");
     setError("");
     setLoadingSheet(true);
     try {
-      const res = await fetch(`/api/events/${selectedDate}/sheets`);
+      const res = await fetch(`/api/events/${selectedDate}/sheets?hall=${encodeURIComponent(selectedEventHall)}`);
       const json = await res.json();
       setSheet(json.data ?? []);
       setMessage("Hoja generada");
@@ -229,12 +235,18 @@ export default function EventsPage() {
             </label>
             <label className="text-sm text-slate-300 flex flex-col gap-1">
               Salón seleccionado
-              <input
+              <select
                 value={selectedEventHall}
                 onChange={(e) => setSelectedEventHall(e.target.value)}
-                placeholder="ROSALIA"
                 className="rounded bg-slate-900 border border-white/10 px-3 py-2"
-              />
+              >
+                <option value="">Elige salón</option>
+                {(eventsByDay.get(selectedDate) ?? []).map((ev) => (
+                  <option key={ev.hall} value={ev.hall}>
+                    {ev.hall}
+                  </option>
+                ))}
+              </select>
             </label>
             <label className="text-sm text-slate-300 flex flex-col gap-1">
               Origen menú
@@ -278,7 +290,7 @@ export default function EventsPage() {
             <button
               type="button"
               onClick={handleAttach}
-              disabled={attaching || !selectedDate}
+              disabled={attaching || !selectedDate || !selectedEventHall}
               className="rounded-lg bg-emerald-500 text-black font-semibold px-4 py-2 disabled:opacity-60"
             >
               {attaching ? "Adjuntando..." : "Adjuntar menú (fecha completa)"}
@@ -286,7 +298,7 @@ export default function EventsPage() {
             <button
               type="button"
               onClick={handleSheet}
-              disabled={loadingSheet || !selectedDate}
+              disabled={loadingSheet || !selectedDate || !selectedEventHall}
               className="rounded-lg bg-white/10 border border-white/10 px-4 py-2 disabled:opacity-60"
             >
               {loadingSheet ? "Generando..." : "Generar hoja producción/compras"}

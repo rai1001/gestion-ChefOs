@@ -6,12 +6,12 @@ const isE2E = process.env.NEXT_PUBLIC_E2E === "1" || process.env.E2E === "1";
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const body = await req.json();
-    const { menu_name } = body;
+    const { menu_name, hall } = body;
     const { id: eventDate } = await params; // using date as id for e2e stub
     const orgId = body.org_id || "org-dev";
 
     if (isE2E) {
-      attachMenu(orgId, eventDate, menu_name);
+      attachMenu(orgId, eventDate, hall, menu_name);
       return NextResponse.json({ status: "ok", mode: "e2e" });
     }
 

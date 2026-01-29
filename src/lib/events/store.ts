@@ -22,19 +22,38 @@ export function upsertEventEntries(rows: EventEntry[]) {
   }
 }
 
-export function attachMenu(orgId: string, event_date: string, menu_name?: string | null) {
+export function attachMenu(orgId: string, event_date: string, hall?: string | null, menu_name?: string | null) {
+  const hallNorm = hall ? hall.trim().toUpperCase() : null;
   for (const key of Array.from(store.keys()).filter((k) => k.startsWith(`${orgId}-${event_date}-`))) {
     const existing = store.get(key);
-    if (existing) {
-      store.set(key, { ...existing, menu_name: menu_name ?? existing.menu_name ?? null });
-    }
+    if (!existing) continue;
+    if (hallNorm && existing.hall.trim().toUpperCase() !== hallNorm) continue;
+    store.set(key, { ...existing, menu_name: menu_name ?? existing.menu_name ?? null });
   }
 }
 
-export function listEventSheets() {
-  return Array.from(store.values()).map((row) => ({
-    ...row,
-    production_items: row.attendees,
-    purchases_items: row.attendees, // simple stub: 1 item per pax
-  }));
+export function listEvents() {
+  return Array.from(store.values());
+}
+
+export function listUpcomingEvents(daysAhead: number) {
+  const now = new Date();
+  const limit = new Date();
+  limit.setDate(now.getDate() + daysAhead);
+  return Array.from(store.values()).filter((ev) => {
+    const d = new Date(ev.event_date);
+    return d >= now && d <= limit;
+  });
+}
+
+export function listEventSheets(event_date?: string, hall?: string | null) {
+  const hallNorm = hall ? hall.trim().toUpperCase() : null;
+  return Array.from(store.values())
+    .filter((row) => (event_date ? row.event_date === event_date : true))
+    .filter((row) => (hallNorm ? row.hall.trim().toUpperCase() === hallNorm : true))
+    .map((row) => ({
+      ...row,
+      production_items: row.attendees,
+      purchases_items: row.attendees, // simple stub: 1 item per pax
+    }));
 }
