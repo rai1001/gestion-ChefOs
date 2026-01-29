@@ -90,7 +90,7 @@ create table if not exists tasks (
 
 create table if not exists task_logs (
   id uuid primary key default gen_random_uuid(),
-  task_id uuid references tasks(id) on delete cascade,
+  task_id uuid references tasks(id) on delete cascade not null,
   org_id uuid references organizations(id) on delete cascade not null,
   action text not null,
   at timestamptz default now() not null
@@ -99,7 +99,7 @@ create table if not exists task_logs (
 create table if not exists labels (
   id uuid primary key default gen_random_uuid(),
   org_id uuid references organizations(id) on delete cascade not null,
-  task_id uuid references tasks(id) on delete cascade,
+  task_id uuid references tasks(id) on delete cascade not null,
   product_id uuid,
   lot_id uuid,
   expires_at date not null,
@@ -169,6 +169,7 @@ create table if not exists receptions (
   id uuid primary key default gen_random_uuid(),
   org_id uuid references organizations(id) on delete cascade not null,
   order_id uuid references purchase_orders(id) on delete cascade,
+  expected_date date,
   photo_url text,
   received_at timestamptz default now() not null
 );
@@ -178,8 +179,8 @@ create table if not exists reception_lines (
   org_id uuid references organizations(id) on delete cascade not null,
   reception_id uuid references receptions(id) on delete cascade,
   product_id uuid,
-  ordered numeric,
-  received numeric,
+  ordered numeric not null default 0,
+  received numeric not null default 0,
   unit text,
   status text default 'pending',
   created_at timestamptz default now() not null
@@ -300,3 +301,57 @@ create index if not exists idx_forecast_delta_org_date on forecast_delta(org_id,
 create or replace function refresh_forecast_delta() returns void language sql as $$
   refresh materialized view forecast_delta;
 $$;
+
+-- Event sheets helper view
+create view if not exists event_sheets as
+select e.id as event_id, e.org_id, e.event_date, e.attendees, e.menu_id from events e;
+
+-- Alerts KPI materialized view and refresh
+create materialized view if not exists kpi_alert_counts as
+select org_id, count(*)::int as alert_count from alerts group by org_id;
+
+create or replace function refresh_kpi_alert_counts() returns void language sql as $$
+  refresh materialized view concurrently kpi_alert_counts;
+$$;
+
+-- Generic alert helper
+create or replace function create_alert(p_org uuid, p_category text, p_message text)
+returns void language plpgsql as $$
+begin
+  insert into alerts(org_id, category, message) values (p_org, p_category, p_message);
+end;
+$$;
+
+-- Reception alerts for delay/shortage
+create or replace function trg_reception_line_alert() returns trigger language plpgsql as $$
+declare
+  rec receptions;
+begin
+  select * into rec from receptions where id = new.reception_id;
+  if rec.expected_date is not null and rec.received_at::date > rec.expected_date then
+    perform create_alert(rec.org_id, 'delay', 'Entrega retrasada');
+  end if;
+  if new.received < new.ordered then
+    perform create_alert(rec.org_id, 'shortage', 'Falta cantidad por recibir');
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_reception_line_alert on reception_lines;
+create trigger trg_reception_line_alert
+after insert or update on reception_lines
+for each row execute function trg_reception_line_alert();
+
+-- Merma alerts
+create or replace function trg_merma_alert() returns trigger language plpgsql as $$
+begin
+  perform create_alert(new.org_id, 'merma', 'Merma registrada');
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_merma_alert on merma;
+create trigger trg_merma_alert
+after insert on merma
+for each row execute function trg_merma_alert();
