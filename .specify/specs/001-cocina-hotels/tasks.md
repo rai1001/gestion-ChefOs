@@ -109,12 +109,12 @@ Implementation:
 
 ## Phase 9: US7 Empleados y turnos móvil (P3)
 Tests first:
-- [ ] T048 [US7] Playwright `tests/e2e/mobile-turnos.spec.ts` (mobile viewport, shifts visible, start/finish tasks, vacations block assignment).
+- [x] T048 [US7] Playwright `tests/e2e/mobile-turnos.spec.ts` (mobile viewport, shifts visible, start/finish tasks, vacations block assignment).
 Implementation:
-- [ ] T049 [P] [US7] API `src/app/api/turnos/route.ts` CRUD for shifts/assignments honoring vacations/bajas.
-- [ ] T050 [US7] UI `src/app/(app)/mobile/turnos/page.tsx` responsive list; reuse task actions; offline caching optional.
+- [x] T049 [P] [US7] API `src/app/api/turnos/route.ts` CRUD for shifts/assignments honoring vacations/bajas.
+- [x] T050 [US7] UI `src/app/(app)/mobile/turnos/page.tsx` responsive list; reuse task actions; offline caching optional.
 - [ ] T051 [US7] Adjust `src/app/(app)/tasks/page.tsx` shared responsive styles.
-- [ ] T052 [US7] Migration additions: employees, shifts, assignments, vacations/bajas.
+- [x] T052 [US7] Migration additions: employees, shifts, assignments, vacations/bajas.
 
 ---
 

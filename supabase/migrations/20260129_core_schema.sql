@@ -211,6 +211,15 @@ create table if not exists shift_assignments (
   created_at timestamptz default now() not null
 );
 
+create table if not exists vacations (
+  id uuid primary key default gen_random_uuid(),
+  org_id uuid references organizations(id) on delete cascade not null,
+  employee_id uuid references employees(id) on delete cascade,
+  start_date date not null,
+  end_date date not null,
+  created_at timestamptz default now() not null
+);
+
 create table if not exists alerts (
   id uuid primary key default gen_random_uuid(),
   org_id uuid references organizations(id) on delete cascade not null,
@@ -230,6 +239,7 @@ create index if not exists idx_purchase_orders_org on purchase_orders(org_id);
 create index if not exists idx_purchase_lines_order on purchase_lines(order_id);
 create index if not exists idx_receptions_org on receptions(org_id);
 create index if not exists idx_reception_lines_reception on reception_lines(reception_id);
+create index if not exists idx_vacations_org on vacations(org_id);
 
 -- RLS enablement
 alter default privileges in schema public revoke all on tables from public;
@@ -251,6 +261,7 @@ alter table employees enable row level security;
 alter table shifts enable row level security;
 alter table shift_assignments enable row level security;
 alter table merma enable row level security;
+alter table vacations enable row level security;
 
 -- Org isolation policies
 create policy if not exists org_isolation_forecasts on forecasts using (org_id = current_setting('request.jwt.claims'::text)::json->>'org_id');
@@ -270,6 +281,7 @@ create policy if not exists org_isolation_employees on employees using (org_id =
 create policy if not exists org_isolation_shifts on shifts using (org_id = current_setting('request.jwt.claims'::text)::json->>'org_id');
 create policy if not exists org_isolation_shift_assignments on shift_assignments using (org_id = current_setting('request.jwt.claims'::text)::json->>'org_id');
 create policy if not exists org_isolation_merma on merma using (org_id = current_setting('request.jwt.claims'::text)::json->>'org_id');
+create policy if not exists org_isolation_vacations on vacations using (org_id = current_setting('request.jwt.claims'::text)::json->>'org_id');
 
 -- Role checks (planner/coordinator/chef/buyer/admin/employee)
 create policy if not exists role_planner_forecasts on forecasts for select using ((current_setting('request.jwt.claims'::text)::json->>'role') = 'planner');
