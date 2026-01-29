@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 
 interface EventRow {
   org_id: string;
@@ -27,6 +27,7 @@ export default function EventsPage() {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1);
   });
+  const [message, setMessage] = useState<string>("");
 
   const sortedRows = useMemo(
     () => [...rows].sort((a, b) => (a.event_date < b.event_date ? -1 : 1)),
@@ -49,15 +50,25 @@ export default function EventsPage() {
 
   const menusFromDb = ["Buffet continental", "Coffee break", "Cóctel finger food", "Gala 3 tiempos"];
 
-  async function refresh() {
-    const res = await fetch("/api/events");
-    const json = await res.json();
-    setRows(json.data ?? []);
-  }
+  const refresh = useCallback(async () => {
+    try {
+      const res = await fetch("/api/events");
+      const json = await res.json();
+      const data = (json.data as EventRow[]) ?? [];
+      const nextRows = data.length === 0 ? demoRows : data;
+      setRows(nextRows);
+      if (!selectedDate && nextRows.length > 0) setSelectedDate(nextRows[0].event_date);
+      if (data.length === 0) setMessage("Usando datos demo; importa Excel para reemplazar.");
+    } catch {
+      setRows(demoRows);
+      if (!selectedDate) setSelectedDate(demoRows[0].event_date);
+      setMessage("Modo demo por error de red");
+    }
+  }, [selectedDate]);
 
   useEffect(() => {
     refresh();
-  }, []);
+  }, [refresh]);
 
   async function importFile(file: File) {
     const form = new FormData();
@@ -69,11 +80,15 @@ export default function EventsPage() {
     e.preventDefault();
     const input = e.currentTarget.file as unknown as HTMLInputElement;
     const file = input?.files?.[0];
-    if (!file) return;
+    if (!file) {
+      await loadDemo();
+      return;
+    }
     setImporting(true);
     try {
       await importFile(file);
       await refresh();
+      setMessage("Eventos importados");
     } finally {
       setImporting(false);
     }
@@ -88,6 +103,8 @@ export default function EventsPage() {
         body: JSON.stringify({ rows: demoRows }),
       });
       await refresh();
+      setSelectedDate(demoRows[0].event_date);
+      setMessage("Demo cargada");
     } finally {
       setImporting(false);
     }
@@ -103,6 +120,7 @@ export default function EventsPage() {
         body: JSON.stringify({ menu_name: menu, org_id: "org-dev" }),
       });
       await refresh();
+      setMessage("Menú adjunto");
     } finally {
       setAttaching(false);
     }
@@ -115,6 +133,7 @@ export default function EventsPage() {
       const res = await fetch(`/api/events/${selectedDate}/sheets`);
       const json = await res.json();
       setSheet(json.data ?? []);
+      setMessage("Hoja generada");
     } finally {
       setLoadingSheet(false);
     }
@@ -284,6 +303,7 @@ export default function EventsPage() {
         <p className="text-[11px] text-slate-400">
           Click en una fecha para precargar el adjunte de menú y generar hojas. CRUD calendario completo pendiente (stub).
         </p>
+        {message && <p className="text-[11px] text-emerald-200">{message}</p>}
       </section>
 
       <section className="bg-white/5 border border-white/10 rounded-xl p-6 space-y-3">
