@@ -34,6 +34,7 @@ export function attachMenu(orgId: string, event_date: string, menu_name?: string
 export function listEventSheets() {
   return Array.from(store.values()).map((row) => ({
     ...row,
-    production_items: row.attendees, // placeholder metric
+    production_items: row.attendees,
+    purchases_items: row.attendees, // simple stub: 1 item per pax
   }));
 }
