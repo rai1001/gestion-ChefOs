@@ -9,8 +9,8 @@ describe("events sheets", () => {
       { org_id: "org", event_date: "2026-02-01", hall: "A", name: "Boda", event_type: "Banquete", attendees: 100 },
       { org_id: "org", event_date: "2026-02-01", hall: "B", name: "Conferencia", event_type: "Corporate", attendees: 50 },
     ]);
-    attachMenu("org", "2026-02-01", "Menu Gala");
-    const rows = listEventSheets().filter((r) => r.event_date === "2026-02-01");
+    attachMenu("org", "2026-02-01", null, "Menu Gala");
+    const rows = listEventSheets("2026-02-01");
     expect(rows).toHaveLength(2);
     expect(rows[0]).toHaveProperty("production_items", rows[0].attendees);
     expect(rows[0]).toHaveProperty("purchases_items", rows[0].attendees);
