@@ -26,6 +26,7 @@ export default function EventsPage() {
   const [selectedDate, setSelectedDate] = useState<string>("");
   const [selectedEventHall, setSelectedEventHall] = useState<string>("");
   const [applyAllHalls, setApplyAllHalls] = useState<boolean>(true);
+  const [showBreakdown, setShowBreakdown] = useState<boolean>(false);
   const [menuSource, setMenuSource] = useState<"bd" | "archivo">("bd");
   const [menu, setMenu] = useState<string>("Buffet continental");
   const [sheet, setSheet] = useState<EventRow[]>([]);
@@ -170,7 +171,8 @@ export default function EventsPage() {
     setLoadingSheet(true);
     try {
       const hallParam = applyAllHalls ? "" : `?hall=${encodeURIComponent(selectedEventHall)}`;
-      const res = await fetch(`/api/events/${selectedDate}/sheets${hallParam}`);
+      const breakdownParam = applyAllHalls && showBreakdown ? `${hallParam ? "&" : "?"}aggregate=false` : "";
+      const res = await fetch(`/api/events/${selectedDate}/sheets${hallParam}${breakdownParam}`);
       const json = await res.json();
       setSheet(json.data ?? []);
       setMessage("Hoja generada");
@@ -267,6 +269,16 @@ export default function EventsPage() {
                 />
                 Aplicar a todos los salones de esa fecha (un mismo evento repartido).
               </label>
+            </label>
+            <label className="text-sm text-slate-300 flex items-center gap-2 md:col-span-3">
+              <input
+                type="checkbox"
+                checked={showBreakdown}
+                onChange={(e) => setShowBreakdown(e.target.checked)}
+                className="accent-emerald-500"
+                disabled={!applyAllHalls}
+              />
+              <span className="text-xs text-slate-400">Ver desglose por salón (cuando aplicas a todos)</span>
             </label>
             <label className="text-sm text-slate-300 flex flex-col gap-1">
               Origen menú
@@ -488,6 +500,7 @@ export default function EventsPage() {
           <thead className="text-slate-300">
             <tr>
               <th className="text-left py-2">Fecha</th>
+              <th className="text-left py-2">Salón</th>
               <th className="text-left py-2">Menú</th>
               <th className="text-right py-2">Producción (raciones)</th>
               <th className="text-right py-2">Compras (items)</th>
@@ -495,11 +508,12 @@ export default function EventsPage() {
           </thead>
           <tbody>
             {sheet.length === 0 && (
-              <tr><td className="py-2" colSpan={4}>Genera una hoja para verla aquí</td></tr>
+              <tr><td className="py-2" colSpan={5}>Genera una hoja para verla aquí</td></tr>
             )}
             {sheet.map((row) => (
-              <tr key={row.event_date} className="hover:bg-white/5">
+              <tr key={`${row.event_date}-${row.hall ?? "ALL"}`} className="hover:bg-white/5">
                 <td className="py-2">{row.event_date}</td>
+                <td className="py-2">{row.hall ?? "TODOS"}</td>
                 <td className="py-2">{row.menu_name ?? "-"}</td>
                 <td className="py-2 text-right">{row.production_items ?? 0}</td>
                 <td className="py-2 text-right">{row.purchases_items ?? 0}</td>
