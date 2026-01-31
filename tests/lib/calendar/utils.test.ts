@@ -18,4 +18,9 @@ describe("calendar utils", () => {
     const l = labelShift("scheduled", "morning");
     expect(l.text).toBe("Mañana");
   });
+
+  it("labels vacations", () => {
+    const l = labelShift("scheduled", "morning", "Pepe Vacaciones");
+    expect(l.text).toBe("Vacaciones");
+  });
 });

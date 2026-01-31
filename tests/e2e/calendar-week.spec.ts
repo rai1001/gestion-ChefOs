@@ -6,5 +6,10 @@ test.describe("calendar week", () => {
     await request.post("/api/shifts", { data: { org_id: "org-dev", shift_date: new Date().toISOString().slice(0, 10), shift_code: "morning", status: "scheduled", employee_name: "Semana Tester" } });
     await page.goto("/calendar/week");
     await expect(page.getByTestId("calendar-week")).toBeVisible();
+    // add quick shift via popover
+    const cell = page.getByTestId(/cell-/).first();
+    await cell.click();
+    await page.getByRole("button", { name: "Mañana" }).first().click();
+    await expect(page.getByTestId(/cell-/).first()).toContainText("Mañana");
   });
 });

@@ -28,7 +28,9 @@ export function groupByDate<T extends Record<string, any>>(items: T[], key: keyo
   }, {} as Record<string, T[]>);
 }
 
-export function labelShift(status: string, code: string) {
+export function labelShift(status: string, code: string, employee_name?: string | null) {
+  if (employee_name?.toLowerCase().includes("vacaciones")) return { text: "Vacaciones", color: "bg-amber-500/20 text-amber-100" };
+  if (employee_name?.toLowerCase().includes("baja")) return { text: "Baja", color: "bg-rose-500/20 text-rose-100" };
   if (status === "cancelled") return { text: "Cancelado", color: "bg-rose-500/20 text-rose-100" };
   if (status === "done") return { text: code === "morning" ? "Mañana" : "Tarde", color: "bg-emerald-500/20 text-emerald-100" };
   return { text: code === "morning" ? "Mañana" : "Tarde", color: "bg-blue-500/20 text-blue-100" };
