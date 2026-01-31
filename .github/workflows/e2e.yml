@@ -31,7 +31,7 @@ jobs:
         run: corepack pnpm install --no-frozen-lockfile
 
       - name: Run unit tests
-        run: corepack pnpm test -- --runInBand
+        run: pnpm vitest --runInBand --exclude tests/e2e/**
 
       - name: Run e2e (Playwright)
         run: corepack pnpm e2e
