@@ -320,10 +320,31 @@ select e.id as event_id, e.org_id, e.event_date, e.attendees, e.menu_id from eve
 
 -- Alerts KPI materialized view and refresh
 create materialized view if not exists kpi_alert_counts as
-select org_id, count(*)::int as alert_count from alerts group by org_id;
+  select org_id, count(*)::int as alert_count from alerts group by org_id;
 
 create or replace function refresh_kpi_alert_counts() returns void language sql as $$
   refresh materialized view concurrently kpi_alert_counts;
+$$;
+
+-- Upcoming events (30 días) para dashboard
+create materialized view if not exists kpi_upcoming_events as
+select org_id, event_date, hall, name, event_type, attendees
+from events
+where event_date >= current_date and event_date < current_date + interval '30 days';
+
+create index if not exists idx_kpi_upcoming_events_org_date on kpi_upcoming_events(org_id, event_date);
+
+create or replace function refresh_kpi_upcoming_events() returns void language sql as $$
+  refresh materialized view concurrently kpi_upcoming_events;
+$$;
+
+-- Refresco unificado de dashboards
+create or replace function refresh_dashboards() returns void language sql as $$
+begin
+  perform refresh_forecast_delta();
+  perform refresh_kpi_alert_counts();
+  perform refresh_kpi_upcoming_events();
+end;
 $$;
 
 -- Generic alert helper

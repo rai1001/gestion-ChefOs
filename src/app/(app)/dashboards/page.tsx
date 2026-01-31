@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { getAlertSummary, getForecastDelta, getUpcomingEvents } from "@/lib/dashboards/queries";
 
 type AlertSummary = { org_id: string; alert_count: number };
 type ForecastDelta = { forecast_date: string; delta: number };
@@ -9,21 +10,22 @@ export default function DashboardsPage() {
   const [alerts, setAlerts] = useState<AlertSummary[]>([]);
   const [deltas, setDeltas] = useState<ForecastDelta[]>([]);
   const [upcoming, setUpcoming] = useState<UpcomingEvent[]>([]);
+  const [alertList, setAlertList] = useState<{ title: string; date: string; severity: "warn" | "danger" }[]>([]);
   const alertCount = alerts[0]?.alert_count ?? 0;
   const deltaAvg =
     deltas.length === 0 ? 0 : Math.round(deltas.reduce((acc, d) => acc + d.delta, 0) / deltas.length);
 
   useEffect(() => {
-    fetch("/api/alerts")
-      .then((r) => r.json())
-      .then((json) => setAlerts(json.data ? [{ org_id: "org", alert_count: json.data.length }] : []));
-    fetch("/api/forecasts/delta")
-      .then((r) => r.json())
-      .then((json) => setDeltas(json.data ?? []));
-    fetch("/api/dashboards/events/upcoming?days=30")
-      .then((r) => r.json())
-      .then((json) => setUpcoming(json.data ?? []))
-      .catch(() => setUpcoming([]));
+    getAlertSummary("org-dev").then(setAlerts).catch(() => setAlerts([]));
+    getForecastDelta("org-dev").then(setDeltas).catch(() => setDeltas([]));
+    getUpcomingEvents("org-dev", 30).then(setUpcoming).catch(() => setUpcoming([]));
+
+    // stub alert list for UI; in prod fetch /api/alerts with details
+    const stubAlerts = [
+      { title: "Pedido retrasado PROV-21", date: "2026-02-10", severity: "warn" as const },
+      { title: "Recepción incompleta ALB-884", date: "2026-02-09", severity: "danger" as const },
+    ];
+    setAlertList(stubAlerts);
   }, []);
 
   return (
@@ -60,22 +62,47 @@ export default function DashboardsPage() {
             <p className="text-sm text-slate-300">Deltas previsión</p>
             <span className="text-xs text-slate-500">{deltas.length} días</span>
           </div>
-          <ul className="text-sm space-y-1" aria-label="delta-list">
-            {deltas.length === 0 && <li>Sin datos</li>}
-            {deltas.map((d) => (
-              <li key={d.forecast_date} data-testid="delta-item" className="flex justify-between">
-                <span>{d.forecast_date}</span>
-                <span className={d.delta >= 0 ? "text-emerald-300" : "text-rose-300"}>{d.delta}</span>
-              </li>
-            ))}
-          </ul>
+          <div className="space-y-2">
+            {deltas.length === 0 && <p className="text-sm text-slate-400">Sin datos</p>}
+            {deltas.map((d) => {
+              const width = Math.min(100, Math.abs(d.delta) * 5); // simple bar width
+              return (
+                <div key={d.forecast_date} data-testid="delta-item" className="flex items-center gap-3 text-sm">
+                  <span className="w-24 text-slate-200">{d.forecast_date}</span>
+                  <div className="flex-1 h-2 rounded-full bg-white/10 overflow-hidden">
+                    <div
+                      className={`h-full ${d.delta >= 0 ? "bg-emerald-400/80" : "bg-rose-400/80"}`}
+                      style={{ width: `${width}%` }}
+                    />
+                  </div>
+                  <span className={`w-12 text-right ${d.delta >= 0 ? "text-emerald-300" : "text-rose-300"}`}>
+                    {d.delta}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
         </div>
 
         <div className="bg-white/5 border border-white/10 rounded-xl p-4 space-y-3">
           <p className="text-sm text-slate-300">Alertas recientes</p>
-          <p className="text-xs text-slate-500">Stub E2E: sin detalle</p>
-          <div className="rounded-lg border border-white/10 bg-white/5 p-3 text-sm text-slate-300">
-            Usa `/api/alerts` para lista detallada; en prod conectar con tabla `alerts`.
+          <div className="space-y-2">
+            {alertList.length === 0 && <p className="text-xs text-slate-500">Sin alertas cargadas.</p>}
+            {alertList.map((a, idx) => (
+              <div
+                key={idx}
+                className={`rounded-md border px-3 py-2 text-sm ${
+                  a.severity === "danger"
+                    ? "border-rose-400/40 bg-rose-500/10 text-rose-100"
+                    : "border-amber-300/40 bg-amber-500/10 text-amber-100"
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span>{a.title}</span>
+                  <span className="text-[11px] text-slate-200">{a.date}</span>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </section>
