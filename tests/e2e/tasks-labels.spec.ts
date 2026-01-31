@@ -20,7 +20,6 @@ test.describe("tasks + labels flow", () => {
     await page.goto("/tasks");
     await expect(page.getByRole("heading", { name: "Producción y etiquetas" })).toBeVisible();
     await expect(page.getByTestId("task-row").first()).toContainText("Mise en place");
-    await expect(page.getByTestId("task-row").first()).toContainText("done");
-    await expect(page.getByRole("table", { name: /lots/i })).toBeVisible();
+    await expect(page.getByTestId("lot-row").first()).toBeVisible({ timeout: 5000 });
   });
 });

@@ -1,40 +1,46 @@
-# API Contracts – Cocina Hotels Core (P1 scope)
+# API Contracts – Cocina Hotels Core (P1)
 
-Auth: Supabase session via `proxy` (App Router). In E2E/stub mode (`NEXT_PUBLIC_E2E=1` or `E2E=1`) routes use in-memory stores; no Supabase calls.
+Auth: Supabase session vía `proxy` (App Router). Modo E2E/stub (`NEXT_PUBLIC_E2E=1` o `E2E=1`): in-memory stores, sin Supabase.
 
 ## Forecasts (US1)
-- `POST /api/forecasts/import` – body `{ org_id, rows:[{forecast_date, guests, breakfasts}] }` → upsert per `(org_id, forecast_date)`.
-- `POST /api/forecasts/real` – body `{ org_id, forecast_date, actual_breakfasts }` → updates real count, refreshes `forecast_delta`.
-- `GET /api/forecasts/delta` – list deltas.
-- `POST /api/forecasts/reset` – E2E helper to clear stores.
+- `POST /api/forecasts/import` – multipart CSV/XLSX o JSON `{ rows:[{ forecast_date, breakfasts }] }`; upsert por `(org_id, forecast_date)`.
+- `POST /api/forecasts/real` – `{ org_id, forecast_date, actual_breakfasts }`; refresca `forecast_delta`.
+- `GET /api/forecasts/delta` – lista delta previsto vs real.
+- `POST /api/forecasts/reset` – helper E2E.
 
 ## Events (US2)
-- `POST /api/events/import` – body `{ org_id, rows:[{event_date, attendees, menu_name?}] }`.
-- `POST /api/events/:id/attach-menu` – stub attach menu/recipe link.
-- `POST /api/events/:id/sheets` – stub generate producción/compras sheets.
+- `POST /api/events/import` – multipart XLSX (matriz fecha x salón) o JSON `{ rows:[{ event_date, hall, name, event_type?, attendees }] }`; upsert `(org_id,event_date,hall)`.
+- `POST /api/events/:id/attach-menu` – `{ menu_name, hall? }`; si `hall` es nulo aplica a todos los salones de la fecha.
+- `GET /api/events/:id/sheets?hall=...&aggregate=false` – hojas de producción/compras agregadas o por salón.
+- `GET /api/dashboards/events/upcoming?days=30` – eventos próximos para dashboard.
+- `GET /api/events` – lista en-memory en E2E (para UI).
 
 ## Producción / Tareas (US3)
-- `GET /api/tasks` – list; `POST /api/tasks` – create pending.
-- `POST /api/tasks/:id/start` | `POST /api/tasks/:id/finish` – state machine.
-- `POST /api/labels` – create etiqueta + lot; `GET /api/labels` – list lots (E2E).
+- `GET /api/tasks` | `POST /api/tasks` – lista/crea tareas.
+- `POST /api/tasks/:id/start` | `POST /api/tasks/:id/finish` – máquina de estados.
+- `POST /api/labels` – crea etiqueta + lote; fallback E2E genera lote aunque la tarea falte.
+- `GET /api/labels` – lista lotes creados.
 
 ## Compras y Recepción (US4)
-- `POST /api/purchases/sheet` – body `{ items:[{supplier,product,quantity,unit,lead_time_days,delivery_days?}] }` → grouped sheet; `GET /api/purchases/sheet` returns last.
-- `GET/POST/DELETE /api/receptions` – create/reset/list receptions.
-- `POST /api/receptions/:id/lines` – register partial line `{ qty, received_at }`.
-- `PATCH /api/receptions/:id/lines` – finalize reception; returns alerts.
-- `GET /api/receptions/alerts` – list alerts (delay/shortage).
+- `POST /api/purchases/sheet` – `{ items:[{supplier,product,quantity,unit,lead_time_days,delivery_days?}] }` → agrupado por proveedor; `GET /api/purchases/sheet` devuelve último.
+- `GET/POST/DELETE /api/receptions` – listar/crear/resetear recepciones.
+- `POST /api/receptions/:id/lines` – registrar parcial `{ qty, received_at }`.
+- `PATCH /api/receptions/:id/lines` – finalizar; devuelve alertas.
+- `GET /api/receptions/alerts` – alertas de retraso/falta.
 
 ## Inventario / Merma (US5)
-- `POST /api/inventory/merma` – body `{ lot_id, quantity }` → reduces lot, logs merma; emits alert.
+- `POST /api/inventory/merma` – `{ lot_id, quantity }` → descuenta lote, registra merma y alerta.
+
+## Turnos móvil (US7)
+- `GET/POST/DELETE /api/turnos` – CRUD simple de turnos/assignments (store E2E).
 
 ## Alerts & Cron
-- `GET /api/alerts` – list generated alerts.
-- `GET /api/cron/refresh-dashboards` – stub; should call refresh of materialized views + alert sweeps in prod.
+- `GET /api/alerts` – lista alertas generadas.
+- `GET /api/cron/refresh-dashboards` – stub; en prod debe refrescar materialized views + alert sweep.
 
-## Pages (client)
-- `/forecasts`, `/events`, `/tasks`, `/purchases`, `/receptions`, `/inventory`.
+## Pages
+`/forecasts`, `/events`, `/tasks`, `/purchases`, `/receptions`, `/inventory`, `/dashboards`, `/mobile/turnos`.
 
-## Data model notes
-- See `supabase/migrations/20260129_core_schema.sql` for RLS, indexes, triggers (`forecast_delta`, `kpi_alert_counts`, alert triggers on reception, merma, expiry/rotura, order due).
-- Storage buckets (manual CLI): `labels`, `albaranes` (private).
+## Notas de datos
+- Esquema y RLS: `supabase/migrations/20260129_core_schema.sql` (índices `org_id` + fecha, triggers de alertas).
+- Buckets esperados (CLI Supabase): `labels`, `albaranes` (privados).

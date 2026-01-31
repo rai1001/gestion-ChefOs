@@ -9,7 +9,10 @@ type EventEntry = {
   menu_id?: string | null;
 };
 
-const store = new Map<string, EventEntry>();
+// ensure singleton across route handlers in dev/e2e
+const globalAny = globalThis as any;
+const store: Map<string, EventEntry> = globalAny.__eventsStore ?? new Map<string, EventEntry>();
+globalAny.__eventsStore = store;
 
 export function resetEventsStore() {
   store.clear();

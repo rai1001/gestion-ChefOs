@@ -78,3 +78,15 @@ export function createLabel(opts: { org_id: string; task_id: string; expires_at:
 export function listLots() {
   return Array.from(lots.values());
 }
+
+export function addLot(org_id: string, lot_id: string, product_id?: string, expires_at?: string) {
+  lots.set(lot_id, {
+    id: lot_id,
+    org_id,
+    product_id,
+    quantity: 1,
+    unit: "ud",
+    expires_at: expires_at ?? new Date().toISOString().slice(0, 10),
+    label_id: `LBL-${lot_id}`,
+  });
+}

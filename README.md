@@ -12,9 +12,9 @@ Next.js (App Router) + Supabase SSR. P1 features: previsión desayunos, eventos,
 
 ## Scripts clave
 ```bash
-corepack pnpm dev                 # arranca Next
-corepack pnpm vitest              # unit tests
-NEXT_PUBLIC_E2E=1 E2E=1 corepack pnpm playwright test --project=chromium  # e2e stubs
+corepack pnpm dev        # arranca Next
+corepack pnpm test       # Vitest
+corepack pnpm e2e        # Playwright (usa NEXT_PUBLIC_E2E=1 E2E=1 desde config)
 ```
 
 ## Rutas principales
@@ -29,5 +29,5 @@ NEXT_PUBLIC_E2E=1 E2E=1 corepack pnpm playwright test --project=chromium  # e2e 
 Ver `docs/perf-budgets.md` (imports <30s, dashboards <3s, alertas <1m).
 
 ## Estado de test actual
-- Vitest: pasa todo (24 tests).
-- Playwright stub: `tests/e2e/smoke.spec.ts` y flujos compras/recepciones/merma pasan con `NEXT_PUBLIC_E2E=1 E2E=1`.
+- Vitest: OK.
+- Playwright (stub/E2E): OK (`corepack pnpm e2e`).

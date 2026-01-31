@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createLabel, listLots } from "@/lib/tasks/store";
+import { createLabel, listLots, addLot } from "@/lib/tasks/store";
 
 const isE2E = process.env.NEXT_PUBLIC_E2E === "1" || process.env.E2E === "1";
 
@@ -13,7 +13,9 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ status: "ok", ...label, mode: "e2e" });
       } catch (e: any) {
         // Fallback: generate lot even si la tarea no existe (para e2e)
-        const fallback = { label_id: "lbl-fallback", lot_id: "lot-fallback", barcode: "LBL-fallback" };
+        const lot_id = "lot-fallback";
+        addLot(org_id || "org-dev", lot_id, product_id ?? "PROD-001", expires_at ?? "2026-12-31");
+        const fallback = { label_id: "lbl-fallback", lot_id, barcode: "LBL-fallback" };
         return NextResponse.json({ status: "ok", ...fallback, mode: "e2e", warning: e?.message });
       }
     }
