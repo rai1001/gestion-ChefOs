@@ -1,0 +1,40 @@
+import { NextRequest, NextResponse } from "next/server";
+import { mistralOcrFromBuffer } from "@/lib/ocr/mistral";
+import { ocrResponseSchema, type OcrKind } from "@/lib/ocr/schema";
+
+const isE2E = process.env.NEXT_PUBLIC_E2E === "1" || process.env.E2E === "1";
+
+export async function POST(req: NextRequest) {
+  try {
+    const contentType = req.headers.get("content-type") || "";
+    const kind = (req.nextUrl.searchParams.get("kind") || "generico") as OcrKind;
+
+    if (isE2E) {
+      const stub = ocrResponseSchema.parse({
+        kind,
+        text: "Texto OCR demo",
+        items: kind === "menu" ? [{ name: "Demo", details: "Stub OCR" }] : undefined,
+      });
+      return NextResponse.json({ data: stub, mode: "e2e" });
+    }
+
+    if (!contentType.includes("multipart/form-data")) {
+      return NextResponse.json({ error: "Usa multipart/form-data con 'file'" }, { status: 400 });
+    }
+    const form = await req.formData();
+    const file = form.get("file");
+    if (!file || typeof file === "string") {
+      return NextResponse.json({ error: "Falta file" }, { status: 400 });
+    }
+
+    const arrayBuffer = await (file as Blob).arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    const mime = (file as Blob).type || "application/octet-stream";
+
+    const data = await mistralOcrFromBuffer(buffer, mime, kind);
+    return NextResponse.json({ data, mode: "prod" });
+  } catch (error: any) {
+    return NextResponse.json({ error: error?.message ?? "invalid" }, { status: 400 });
+  }
+}
+
