@@ -9,14 +9,16 @@ export async function GET(req: NextRequest) {
   const org_id = url.searchParams.get("org_id") ?? "org-dev";
   const start = url.searchParams.get("start") ?? undefined;
   const end = url.searchParams.get("end") ?? undefined;
-  if (isE2E()) return NextResponse.json({ data: listShifts(org_id, start, end), mode: "e2e" });
+  const hotel_id = url.searchParams.get("hotel_id") ?? undefined;
+  if (isE2E()) return NextResponse.json({ data: listShifts(org_id, start, end, hotel_id), mode: "e2e" });
 
   const admin = supabaseAdmin();
-  if (!admin) return NextResponse.json({ data: listShifts(org_id, start, end), mode: "stub" });
+  if (!admin) return NextResponse.json({ data: listShifts(org_id, start, end, hotel_id), mode: "stub" });
 
   const q = admin.from("shifts").select("*").eq("org_id", org_id);
   if (start) q.gte("shift_date", start);
   if (end) q.lte("shift_date", end);
+  if (hotel_id) q.eq("hotel_id", hotel_id);
   const { data, error } = await q;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ data, mode: "prod" });

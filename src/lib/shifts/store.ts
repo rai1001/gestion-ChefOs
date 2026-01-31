@@ -12,9 +12,10 @@ export function seedShift(s: Shift) {
   shifts.set(s.id, s);
 }
 
-export function listShifts(org_id: string, start?: string, end?: string) {
+export function listShifts(org_id: string, start?: string, end?: string, hotel_id?: string | null) {
   return Array.from(shifts.values()).filter((s) => {
     if (s.org_id !== org_id) return false;
+    if (hotel_id && s.hotel_id !== hotel_id) return false;
     if (start && s.shift_date < start) return false;
     if (end && s.shift_date > end) return false;
     return true;
