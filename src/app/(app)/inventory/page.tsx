@@ -68,6 +68,9 @@ export default function InventoryPage() {
         <p className="text-xs uppercase tracking-[0.2em] text-emerald-300">Inventario</p>
         <h1 className="text-3xl font-semibold">Inventario y merma</h1>
         <p className="text-slate-300">Ajusta mermas y recalcula coste real.</p>
+        <div className="text-xs text-amber-200 bg-amber-500/10 border border-amber-400/30 rounded-md px-3 py-2 max-w-2xl" data-testid="inventory-demo-alert">
+          Modo demo/E2E: los lotes se almacenan en memoria. Pendiente conectar con Supabase (lotes, mermas, caducidades) antes de uso real.
+        </div>
       </header>
 
       <section className="bg-white/5 border border-white/10 rounded-xl p-6 space-y-4">
