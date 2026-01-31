@@ -36,6 +36,11 @@ Auth: Supabase session vía `proxy` (App Router). Modo E2E/stub (`NEXT_PUBLIC_E2
 ## Turnos móvil (US7)
 - `GET/POST/DELETE /api/turnos` – CRUD simple de turnos/assignments (store E2E).
 
+## Hoteles / Empleados / Turnos (MVP staff)
+- `GET/POST /api/hotels` – lista/crea hoteles (org_id default org-dev). E2E/stub in-memory cuando no hay Supabase.
+- `GET/POST /api/employees` – lista/crea empleados `{ name, role, email?, hotel_id? }`.
+- `GET/POST /api/shifts` – lista/crea turnos `{ shift_date, shift_code: morning|evening, status }` con filtro `start/end`.
+
 ## Alerts & Cron
 - `GET /api/alerts` – lista alertas generadas.
 - `GET /api/cron/refresh-dashboards` – stub; en prod debe refrescar materialized views + alert sweep.
