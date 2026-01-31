@@ -1,18 +1,44 @@
 import { supabaseClient } from "@/lib/supabase/client";
+import { listLots } from "@/lib/tasks/store";
 
 export type AlertSummary = { org_id: string; alert_count: number };
+export type ExpirySummary = { lot_id: string; product_id?: string; expires_at?: string };
 export type ForecastDelta = { forecast_date: string; delta: number };
 export type UpcomingEvent = { event_date: string; hall: string; name: string; event_type?: string | null; attendees: number };
 
 export async function getAlertSummary(org_id: string): Promise<AlertSummary[]> {
   const isE2E = process.env.NEXT_PUBLIC_E2E === "1" || process.env.E2E === "1";
   if (isE2E) {
-    return [{ org_id, alert_count: 2 }];
+    const lots = listLots();
+    const today = new Date();
+    const soon = new Date(today.getTime() + 2 * 86400000).toISOString().slice(0, 10);
+    const alertCount = lots.filter((l) => l.expires_at && l.expires_at <= soon).length;
+    return [{ org_id, alert_count: alertCount }];
   }
   const supabase = supabaseClient();
   const { data, error } = await supabase.from("kpi_alert_counts").select("*").eq("org_id", org_id);
   if (error) throw error;
   return (data as AlertSummary[]) ?? [];
+}
+
+export async function getExpirySoon(org_id: string, daysAhead = 2): Promise<ExpirySummary[]> {
+  const isE2E = process.env.NEXT_PUBLIC_E2E === "1" || process.env.E2E === "1";
+  if (isE2E) {
+    const lots = listLots();
+    const soon = new Date(Date.now() + daysAhead * 86400000);
+    return lots.filter((l) => l.expires_at && new Date(l.expires_at) <= soon).map((l) => ({ lot_id: l.id, product_id: l.product_id, expires_at: l.expires_at }));
+  }
+  const supabase = supabaseClient();
+  const limitDate = new Date(Date.now() + daysAhead * 86400000).toISOString().slice(0, 10);
+  const { data, error } = await supabase
+    .from("inventory_lots")
+    .select("id, product_id, expires_at")
+    .eq("org_id", org_id)
+    .lte("expires_at", limitDate)
+    .order("expires_at", { ascending: true })
+    .limit(20);
+  if (error) throw error;
+  return (data ?? []).map((r) => ({ lot_id: (r as any).id, product_id: (r as any).product_id, expires_at: (r as any).expires_at }));
 }
 
 export async function getForecastDelta(org_id: string): Promise<ForecastDelta[]> {
