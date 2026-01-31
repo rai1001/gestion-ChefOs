@@ -29,11 +29,13 @@ const tables = [
 describe("core schema migration", () => {
   const sql = readFileSync(join(process.cwd(), "supabase", "migrations", "20260129_core_schema.sql"), "utf8");
   const tasksExt = readFileSync(join(process.cwd(), "supabase", "migrations", "20260131_tasks_production.sql"), "utf8");
+  const hotelsExt = readFileSync(join(process.cwd(), "supabase", "migrations", "20260131_auth_hotels.sql"), "utf8");
 
   it("declares all required tables", () => {
     for (const t of tables) {
       expect(sql).toContain(`create table if not exists ${t}`);
     }
+    expect(hotelsExt).toContain("create table if not exists hotels");
   });
 
   it("enables row level security on key tables", () => {
@@ -73,5 +75,12 @@ describe("core schema migration", () => {
     expect(tasksExt.toLowerCase()).toContain("shift in ('morning','evening')");
     expect(tasksExt).toContain("tasks_status_chk");
     expect(tasksExt.toLowerCase()).toContain("idx_tasks_org_due_shift");
+  });
+
+  it("adds hotels and employee/shifts extensions", () => {
+    expect(hotelsExt).toContain("create table if not exists hotels");
+    expect(hotelsExt.toLowerCase()).toContain("alter table employees");
+    expect(hotelsExt.toLowerCase()).toContain("idx_hotels_org");
+    expect(hotelsExt.toLowerCase()).toContain("idx_shifts_org_date");
   });
 });

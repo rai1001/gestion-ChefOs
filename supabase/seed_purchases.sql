@@ -32,3 +32,25 @@ values
   ('org-demo', 'Mise en place desayunos', current_date, 'morning', 'high', 'restaurante', 120, 'pending'),
   ('org-demo', 'Salsa base evento', current_date + 1, 'evening', 'medium', 'castelao', 80, 'pending')
 on conflict (id) do nothing;
+
+-- Sample hotel and employees
+insert into hotels (org_id, name)
+values ('org-demo', 'Hotel Demo')
+on conflict (org_id, name) do nothing;
+
+insert into employees (org_id, hotel_id, name, role, email, status)
+select 'org-demo', h.id, v.name, v.role, v.email, 'active'
+from (values
+  ('Chef A', 'chef', 'chef.a@demo.test'),
+  ('Camarero B', 'server', 'server.b@demo.test')
+) as v(name, role, email)
+cross join hotels h
+where h.org_id = 'org-demo'
+on conflict (id) do nothing;
+
+-- Sample shifts for the demo week
+insert into shifts (org_id, hotel_id, shift_date, name, shift_code, status)
+select 'org-demo', h.id, current_date + g.day, 'Turno ' || g.day, case when g.day % 2 = 0 then 'morning' else 'evening' end, 'scheduled'
+from generate_series(0,2) as g(day)
+cross join hotels h
+on conflict (id) do nothing;
