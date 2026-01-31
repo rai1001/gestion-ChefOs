@@ -8,7 +8,8 @@ export default function ReceptionsPage() {
   const [receptions, setReceptions] = useState<ReceptionRow[]>([]);
   const [alerts, setAlerts] = useState<AlertRow[]>([]);
   const [newId, setNewId] = useState("PO-1001");
-  const [expected, setExpected] = useState<number | "">("");
+  const [expected, setExpected] = useState<number | "">(10);
+  const [expectedDate, setExpectedDate] = useState<string>(() => new Date().toISOString().slice(0, 10));
   const [recvId, setRecvId] = useState("");
   const [recvQty, setRecvQty] = useState<number | "">("");
   const [message, setMessage] = useState("");
@@ -55,7 +56,11 @@ useEffect(() => {
     await fetch("/api/receptions", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ id: newId, expected_qty: Number(expected), expected_date: new Date().toISOString().slice(0, 10) }),
+      body: JSON.stringify({
+        id: newId,
+        expected_qty: Number(expected),
+        expected_date: expectedDate || new Date().toISOString().slice(0, 10),
+      }),
     });
     setMessage(`Pedido ${newId} creado`);
     await refresh();
@@ -109,9 +114,10 @@ useEffect(() => {
           <button onClick={refresh} className="rounded-md border border-white/15 px-3 py-1 hover:bg-white/10">Recargar</button>
           <button
             onClick={() => ocrInputRef.current?.click()}
-            className="rounded-md border border-emerald-300/50 px-3 py-1 text-emerald-200 hover:bg-emerald-300/10"
+            aria-label="btn-escaneo-albaran"
+            className="rounded-md border border-emerald-300/50 px-3 py-1 text-emerald-200 hover:bg-emerald-300/10 bg-emerald-500/10"
           >
-            Escanear albarán
+            Escanear albarán / hoja
           </button>
           <input
             ref={ocrInputRef}
@@ -132,6 +138,10 @@ useEffect(() => {
           <label className="flex flex-col gap-1">
             Cant. esperada
             <input value={expected} onChange={(e) => setExpected(e.target.value === "" ? "" : Number(e.target.value))} type="number" className="rounded bg-slate-900 border border-white/10 px-3 py-2" />
+          </label>
+          <label className="flex flex-col gap-1">
+            Fecha esperada
+            <input value={expectedDate} onChange={(e) => setExpectedDate(e.target.value)} type="date" className="rounded bg-slate-900 border border-white/10 px-3 py-2" />
           </label>
           <button onClick={createReception} className="md:self-end rounded-lg bg-emerald-500 text-black font-semibold px-4 py-2">Crear recepción</button>
         </div>
