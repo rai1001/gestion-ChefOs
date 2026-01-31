@@ -6,7 +6,13 @@ export type ForecastEntry = {
   actual_breakfasts?: number;
 };
 
-const store = new Map<string, ForecastEntry>();
+// Keep data across HMR/dev server reloads in E2E by storing on globalThis.
+const globalStore = (globalThis as any).__forecastStore as Map<string, ForecastEntry> | undefined;
+const store: Map<string, ForecastEntry> =
+  globalStore && globalStore instanceof Map ? globalStore : new Map<string, ForecastEntry>();
+if (!(globalThis as any).__forecastStore) {
+  (globalThis as any).__forecastStore = store;
+}
 
 export function resetStore() {
   store.clear();
