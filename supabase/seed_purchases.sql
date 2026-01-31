@@ -25,3 +25,10 @@ join suppliers s
    (p.category = 'Lácteos' and s.name = 'Lácteos del Norte')
  )
 on conflict (id) do nothing;
+
+-- Sample production tasks (2 upcoming days, morning/evening)
+insert into tasks (org_id, title, due_date, shift, priority, hall, servings, status)
+values
+  ('org-demo', 'Mise en place desayunos', current_date, 'morning', 'high', 'restaurante', 120, 'pending'),
+  ('org-demo', 'Salsa base evento', current_date + 1, 'evening', 'medium', 'castelao', 80, 'pending')
+on conflict (id) do nothing;

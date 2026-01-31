@@ -28,6 +28,7 @@ const tables = [
 
 describe("core schema migration", () => {
   const sql = readFileSync(join(process.cwd(), "supabase", "migrations", "20260129_core_schema.sql"), "utf8");
+  const tasksExt = readFileSync(join(process.cwd(), "supabase", "migrations", "20260131_tasks_production.sql"), "utf8");
 
   it("declares all required tables", () => {
     for (const t of tables) {
@@ -65,5 +66,12 @@ describe("core schema migration", () => {
   it("uses not null on core columns", () => {
     expect(sql).toContain("org_id uuid references organizations(id) on delete cascade not null");
     expect(sql).toContain("created_at timestamptz default now() not null");
+  });
+
+  it("extends tasks with production fields and constraints", () => {
+    expect(tasksExt).toContain("due_date date");
+    expect(tasksExt.toLowerCase()).toContain("shift in ('morning','evening')");
+    expect(tasksExt).toContain("tasks_status_chk");
+    expect(tasksExt.toLowerCase()).toContain("idx_tasks_org_due_shift");
   });
 });
