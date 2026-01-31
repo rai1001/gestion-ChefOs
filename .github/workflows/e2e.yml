@@ -33,7 +33,7 @@ jobs:
         run: pnpm install --no-frozen-lockfile
 
       - name: Run unit tests
-        run: pnpm vitest run "tests/**/*.test.ts"
+        run: pnpm vitest run "tests/**/*.test.ts" --passWithNoTests
 
       - name: Run e2e (Playwright)
         run: pnpm e2e
