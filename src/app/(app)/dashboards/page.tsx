@@ -1,91 +1,87 @@
 "use client";
 import { useEffect, useState } from "react";
-import { getAlertSummary, getForecastDelta, getUpcomingEvents } from "@/lib/dashboards/queries";
+import {
+  getAlertSummary,
+  getForecastDelta,
+  getUpcomingEvents,
+  getExpirySoon,
+  getUpcomingTasks,
+  getAlerts,
+  getBreakfastForecast,
+} from "@/lib/dashboards/queries";
 
 type AlertSummary = { org_id: string; alert_count: number };
 type ForecastDelta = { forecast_date: string; delta: number };
 type UpcomingEvent = { event_date: string; hall: string; name: string; attendees: number; event_type?: string | null };
+type ExpiryItem = { lot_id: string; product_id?: string; expires_at?: string };
+type TaskItem = { id: string; title: string; due_date: string; shift: "morning" | "evening"; status: string; hall?: string | null };
+type AlertItem = { title: string; date?: string; severity: "warn" | "danger" };
+type BreakfastItem = { date: string; breakfasts: number };
 
 export default function DashboardsPage() {
   const [alerts, setAlerts] = useState<AlertSummary[]>([]);
   const [deltas, setDeltas] = useState<ForecastDelta[]>([]);
   const [upcoming, setUpcoming] = useState<UpcomingEvent[]>([]);
-  const [alertList, setAlertList] = useState<{ title: string; date: string; severity: "warn" | "danger" }[]>([]);
+  const [alertList, setAlertList] = useState<AlertItem[]>([]);
+  const [expiry, setExpiry] = useState<ExpiryItem[]>([]);
+  const [tasks, setTasks] = useState<TaskItem[]>([]);
+  const [breakfasts, setBreakfasts] = useState<BreakfastItem[]>([]);
   const alertCount = alerts[0]?.alert_count ?? 0;
   const deltaAvg =
     deltas.length === 0 ? 0 : Math.round(deltas.reduce((acc, d) => acc + d.delta, 0) / deltas.length);
+  const breakfastsSum = breakfasts.reduce((acc, b) => acc + (b.breakfasts ?? 0), 0);
+  const tasksCount = tasks.length;
+  const expiryCount = expiry.length;
 
   useEffect(() => {
     getAlertSummary("org-dev").then(setAlerts).catch(() => setAlerts([]));
     getForecastDelta("org-dev").then(setDeltas).catch(() => setDeltas([]));
-    getUpcomingEvents("org-dev", 30).then(setUpcoming).catch(() => setUpcoming([]));
-
-    // stub alert list for UI; in prod fetch /api/alerts with details
-    const stubAlerts = [
-      { title: "Pedido retrasado PROV-21", date: "2026-02-10", severity: "warn" as const },
-      { title: "Recepción incompleta ALB-884", date: "2026-02-09", severity: "danger" as const },
-    ];
-    setAlertList(stubAlerts);
+    getUpcomingEvents("org-dev", 7).then(setUpcoming).catch(() => setUpcoming([]));
+    getExpirySoon("org-dev", 7).then(setExpiry).catch(() => setExpiry([]));
+    getUpcomingTasks("org-dev", 7).then(setTasks).catch(() => setTasks([]));
+    getAlerts("org-dev").then(setAlertList).catch(() => setAlertList([]));
+    getBreakfastForecast("org-dev", 7).then(setBreakfasts).catch(() => setBreakfasts([]));
   }, []);
 
   return (
     <main className="min-h-screen bg-slate-950 text-white px-6 py-10 space-y-8">
       <header className="space-y-2">
         <p className="text-xs uppercase tracking-[0.2em] text-emerald-300">KPIs</p>
-        <h1 className="text-3xl font-semibold">Dashboards</h1>
-        <p className="text-slate-300">Alertas, previsión y eventos próximos.</p>
+        <h1 className="text-3xl font-semibold">Dashboard operativo</h1>
+        <p className="text-slate-300">Alertas, tareas, previsión de desayunos y caducidades próximas.</p>
       </header>
 
-      <section className="grid gap-4 md:grid-cols-3">
-        <div className="bg-white/5 border border-white/10 rounded-xl p-4 space-y-1">
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <div className="bg-white/5 border border-white/10 rounded-xl p-4 space-y-1" data-testid="card-alerts">
           <p className="text-sm text-slate-300">Alertas</p>
           <p className="text-3xl font-semibold" data-testid="alerts-count">
             {alertCount}
           </p>
           <p className="text-xs text-slate-400">Pendientes de revisión</p>
         </div>
-        <div className="bg-white/5 border border-white/10 rounded-xl p-4 space-y-1">
-          <p className="text-sm text-slate-300">Próximos eventos (30d)</p>
-          <p className="text-3xl font-semibold">{upcoming.length}</p>
-          <p className="text-xs text-slate-400">Sumariza salones y tipos</p>
+        <div className="bg-white/5 border border-white/10 rounded-xl p-4 space-y-1" data-testid="card-tasks">
+          <p className="text-sm text-slate-300">Tareas (7 días)</p>
+          <p className="text-3xl font-semibold">{tasksCount}</p>
+          <p className="text-xs text-slate-400">Pendientes / en curso</p>
         </div>
-        <div className="bg-white/5 border border-white/10 rounded-xl p-4 space-y-1">
-          <p className="text-sm text-slate-300">Δ desayunos promedio</p>
-          <p className="text-3xl font-semibold">{deltaAvg}</p>
-          <p className="text-xs text-slate-400">Delta medio de previsión vs real</p>
+        <div className="bg-white/5 border border-white/10 rounded-xl p-4 space-y-1" data-testid="card-forecast">
+          <p className="text-sm text-slate-300">Previsión desayunos (7d)</p>
+          <p className="text-3xl font-semibold">{breakfastsSum}</p>
+          <p className="text-xs text-slate-400">Suma prevista próximos 7 días</p>
+        </div>
+        <div className="bg-white/5 border border-white/10 rounded-xl p-4 space-y-1" data-testid="card-expiry">
+          <p className="text-sm text-slate-300">Caducidades (≤7d)</p>
+          <p className="text-3xl font-semibold">{expiryCount}</p>
+          <p className="text-xs text-slate-400">Lotes a revisar</p>
         </div>
       </section>
 
-      <section className="grid gap-4 md:grid-cols-3">
-        <div className="bg-white/5 border border-white/10 rounded-xl p-4 md:col-span-2 space-y-3">
+      <section className="grid gap-4 lg:grid-cols-2">
+        <div className="bg-white/5 border border-white/10 rounded-xl p-4 space-y-3" data-testid="list-alerts">
           <div className="flex items-center justify-between">
-            <p className="text-sm text-slate-300">Deltas previsión</p>
-            <span className="text-xs text-slate-500">{deltas.length} días</span>
+            <p className="text-sm text-slate-300">Alertas recientes</p>
+            <span className="text-xs text-slate-500">{alertList.length}</span>
           </div>
-          <div className="space-y-2">
-            {deltas.length === 0 && <p className="text-sm text-slate-400">Sin datos</p>}
-            {deltas.map((d) => {
-              const width = Math.min(100, Math.abs(d.delta) * 5); // simple bar width
-              return (
-                <div key={d.forecast_date} data-testid="delta-item" className="flex items-center gap-3 text-sm">
-                  <span className="w-24 text-slate-200">{d.forecast_date}</span>
-                  <div className="flex-1 h-2 rounded-full bg-white/10 overflow-hidden">
-                    <div
-                      className={`h-full ${d.delta >= 0 ? "bg-emerald-400/80" : "bg-rose-400/80"}`}
-                      style={{ width: `${width}%` }}
-                    />
-                  </div>
-                  <span className={`w-12 text-right ${d.delta >= 0 ? "text-emerald-300" : "text-rose-300"}`}>
-                    {d.delta}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        <div className="bg-white/5 border border-white/10 rounded-xl p-4 space-y-3">
-          <p className="text-sm text-slate-300">Alertas recientes</p>
           <div className="space-y-2">
             {alertList.length === 0 && <p className="text-xs text-slate-500">Sin alertas cargadas.</p>}
             {alertList.map((a, idx) => (
@@ -105,25 +101,67 @@ export default function DashboardsPage() {
             ))}
           </div>
         </div>
+
+        <div className="bg-white/5 border border-white/10 rounded-xl p-4 space-y-3" data-testid="list-events">
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-slate-300">Próximos eventos (7 días)</p>
+            <span className="text-xs text-slate-500">{upcoming.length}</span>
+          </div>
+          <div className="space-y-2">
+            {upcoming.length === 0 && <p className="text-sm text-slate-400">Sin eventos próximos.</p>}
+            {upcoming.map((ev) => (
+              <div key={`${ev.event_date}-${ev.hall}-${ev.name}`} className="rounded-lg border border-white/10 bg-white/5 p-3 space-y-1 text-sm">
+                <div className="flex items-center justify-between text-slate-200">
+                  <span className="font-semibold">{ev.hall}</span>
+                  <span className="text-xs text-slate-400">{ev.event_date}</span>
+                </div>
+                <div className="text-slate-100">{ev.name}</div>
+                <div className="text-xs text-slate-400">{ev.attendees} pax · {ev.event_type ?? "Tipo"}</div>
+              </div>
+            ))}
+          </div>
+        </div>
       </section>
 
-      <section className="bg-white/5 border border-white/10 rounded-xl p-6 space-y-3">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Próximos eventos (30 días)</h2>
-          <span className="text-xs text-slate-400">{upcoming.length}</span>
-        </div>
-        <div className="grid gap-3 md:grid-cols-2">
-          {upcoming.length === 0 && <p className="text-sm text-slate-400">Sin eventos próximos.</p>}
-          {upcoming.map((ev) => (
-            <div key={`${ev.event_date}-${ev.hall}-${ev.name}`} className="rounded-lg border border-white/10 bg-white/5 p-4 space-y-1">
-              <div className="flex items-center justify-between text-sm text-slate-200">
-                <span className="font-semibold">{ev.hall}</span>
-                <span className="text-xs text-slate-400">{ev.event_date}</span>
+      <section className="grid gap-4 lg:grid-cols-2">
+        <div className="bg-white/5 border border-white/10 rounded-xl p-4 space-y-3" data-testid="list-expiry">
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-slate-300">Caducidades próximas (≤7 días)</p>
+            <span className="text-xs text-slate-500">{expiry.length}</span>
+          </div>
+          <div className="space-y-2">
+            {expiry.length === 0 && <p className="text-sm text-slate-400">Sin caducidades.</p>}
+            {expiry.map((lot) => (
+              <div key={lot.lot_id} className="rounded-md border border-white/10 bg-white/5 px-3 py-2 text-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-100">{lot.product_id ?? "Producto"}</span>
+                  <span className="text-xs text-slate-400">{lot.expires_at ?? "-"}</span>
+                </div>
+                <p className="text-[11px] text-slate-500">Lote {lot.lot_id}</p>
               </div>
-              <div className="text-slate-100">{ev.name}</div>
-              <div className="text-xs text-slate-400">{ev.attendees} pax · {ev.event_type ?? "Tipo"}</div>
-            </div>
-          ))}
+            ))}
+          </div>
+        </div>
+
+        <div className="bg-white/5 border border-white/10 rounded-xl p-4 space-y-3" data-testid="list-tasks">
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-slate-300">Tareas próximas (7 días)</p>
+            <span className="text-xs text-slate-500">{tasks.length}</span>
+          </div>
+          <div className="space-y-2">
+            {tasks.length === 0 && <p className="text-sm text-slate-400">Sin tareas.</p>}
+            {tasks.map((t) => (
+              <div key={t.id} className="rounded-md border border-white/10 bg-white/5 px-3 py-2 text-sm">
+                <div className="flex items-center justify-between text-slate-200">
+                  <span className="font-semibold">{t.title}</span>
+                  <span className="text-xs text-slate-400">{t.due_date}</span>
+                </div>
+                <p className="text-[11px] text-slate-400">
+                  {t.shift === "morning" ? "Mañana" : "Tarde"} · {t.status} · {t.hall ?? "Hall"}
+                </p>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
     </main>

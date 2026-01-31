@@ -5,10 +5,13 @@ export type AlertSummary = { org_id: string; alert_count: number };
 export type ExpirySummary = { lot_id: string; product_id?: string; expires_at?: string };
 export type ForecastDelta = { forecast_date: string; delta: number };
 export type UpcomingEvent = { event_date: string; hall: string; name: string; event_type?: string | null; attendees: number };
+export type UpcomingTask = { id: string; title: string; due_date: string; shift: "morning" | "evening"; status: string; hall?: string | null };
+export type AlertItem = { title: string; date?: string; severity: "warn" | "danger" };
+
+const isE2E = () => process.env.NEXT_PUBLIC_E2E === "1" || process.env.E2E === "1";
 
 export async function getAlertSummary(org_id: string): Promise<AlertSummary[]> {
-  const isE2E = process.env.NEXT_PUBLIC_E2E === "1" || process.env.E2E === "1";
-  if (isE2E) {
+  if (isE2E()) {
     const lots = listLots();
     const today = new Date();
     const soon = new Date(today.getTime() + 2 * 86400000).toISOString().slice(0, 10);
@@ -40,8 +43,7 @@ export async function getAlertSummary(org_id: string): Promise<AlertSummary[]> {
 }
 
 export async function getExpirySoon(org_id: string, daysAhead = 2): Promise<ExpirySummary[]> {
-  const isE2E = process.env.NEXT_PUBLIC_E2E === "1" || process.env.E2E === "1";
-  if (isE2E) {
+  if (isE2E()) {
     const lots = listLots();
     const soon = new Date(Date.now() + daysAhead * 86400000);
     return lots.filter((l) => l.expires_at && new Date(l.expires_at) <= soon).map((l) => ({ lot_id: l.id, product_id: l.product_id, expires_at: l.expires_at }));
@@ -60,8 +62,7 @@ export async function getExpirySoon(org_id: string, daysAhead = 2): Promise<Expi
 }
 
 export async function getForecastDelta(org_id: string): Promise<ForecastDelta[]> {
-  const isE2E = process.env.NEXT_PUBLIC_E2E === "1" || process.env.E2E === "1";
-  if (isE2E) {
+  if (isE2E()) {
     return [{ forecast_date: "2026-02-01", delta: -10 }];
   }
   const supabase = supabaseClient();
@@ -71,8 +72,7 @@ export async function getForecastDelta(org_id: string): Promise<ForecastDelta[]>
 }
 
 export async function getUpcomingEvents(org_id: string, daysAhead = 30): Promise<UpcomingEvent[]> {
-  const isE2E = process.env.NEXT_PUBLIC_E2E === "1" || process.env.E2E === "1";
-  if (isE2E) {
+  if (isE2E()) {
     return [
       { event_date: "2026-02-10", hall: "ROSALIA", name: "Cena Gala", event_type: "Banquete", attendees: 120 },
       { event_date: "2026-02-11", hall: "PONDAL", name: "Conferencia", event_type: "Corporate", attendees: 60 },
@@ -87,4 +87,56 @@ export async function getUpcomingEvents(org_id: string, daysAhead = 30): Promise
     .lte("event_date", limitDate);
   if (error) throw error;
   return (data as UpcomingEvent[]) ?? [];
+}
+
+export async function getUpcomingTasks(org_id: string, daysAhead = 7): Promise<UpcomingTask[]> {
+  if (isE2E()) {
+    const tasks = listTasks({ to: new Date(Date.now() + daysAhead * 86400000).toISOString().slice(0, 10) });
+    return tasks.map((t) => ({ id: t.id, title: t.title, due_date: t.due_date, shift: t.shift, status: t.status, hall: t.hall }));
+  }
+  const supabase = supabaseClient();
+  const limitDate = new Date(Date.now() + daysAhead * 86400000).toISOString().slice(0, 10);
+  const { data, error } = await supabase
+    .from("tasks")
+    .select("id, title, due_date, shift, status, hall")
+    .eq("org_id", org_id)
+    .lte("due_date", limitDate)
+    .in("status", ["pending", "in_progress"])
+    .order("due_date", { ascending: true });
+  if (error) throw error;
+  return (data as UpcomingTask[]) ?? [];
+}
+
+export async function getAlerts(org_id: string): Promise<AlertItem[]> {
+  if (isE2E()) {
+    return [
+      { title: "Pedido retrasado PROV-21", date: "2026-02-10", severity: "warn" },
+      { title: "Recepción incompleta ALB-884", date: "2026-02-09", severity: "danger" },
+    ];
+  }
+  const supabase = supabaseClient();
+  const { data, error } = await supabase.from("alerts_view").select("title, date, severity").eq("org_id", org_id).limit(10);
+  if (error) throw error;
+  return (data as AlertItem[]) ?? [];
+}
+
+export async function getBreakfastForecast(org_id: string, daysAhead = 7): Promise<{ date: string; breakfasts: number }[]> {
+  if (isE2E()) {
+    const today = new Date();
+    return Array.from({ length: daysAhead }).map((_, i) => {
+      const d = new Date(today.getTime() + i * 86400000).toISOString().slice(0, 10);
+      return { date: d, breakfasts: 120 + i * 3 };
+    });
+  }
+  const supabase = supabaseClient();
+  const limitDate = new Date(Date.now() + daysAhead * 86400000).toISOString().slice(0, 10);
+  const { data, error } = await supabase
+    .from("forecast_real_joined")
+    .select("date, breakfasts")
+    .eq("org_id", org_id)
+    .lte("date", limitDate)
+    .order("date", { ascending: true })
+    .limit(14);
+  if (error) throw error;
+  return (data as any[])?.map((r) => ({ date: r.date, breakfasts: r.breakfasts })) ?? [];
 }
