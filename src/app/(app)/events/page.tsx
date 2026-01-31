@@ -29,6 +29,7 @@ export default function EventsPage() {
   const [showBreakdown, setShowBreakdown] = useState<boolean>(false);
   const [menuSource, setMenuSource] = useState<"bd" | "archivo">("bd");
   const [menu, setMenu] = useState<string>("Buffet continental");
+  const [menuFile, setMenuFile] = useState<File | null>(null);
   const [sheet, setSheet] = useState<EventRow[]>([]);
   const [importing, setImporting] = useState(false);
   const [attaching, setAttaching] = useState(false);
@@ -145,11 +146,29 @@ export default function EventsPage() {
     setError("");
     setAttaching(true);
     try {
+      let menuName = menu;
+      if (menuSource === "archivo") {
+        if (!menuFile) {
+          setError("Selecciona un archivo de menú");
+          setAttaching(false);
+          return;
+        }
+        const form = new FormData();
+        form.append("file", menuFile);
+        const res = await fetch("/api/ocr?kind=menu", { method: "POST", body: form });
+        if (!res.ok) {
+          const j = await res.json().catch(() => ({}));
+          throw new Error(j.error || "OCR falló");
+        }
+        const { data } = await res.json();
+        menuName = data?.items?.[0]?.name ?? (data?.text as string) ?? "Menú OCR";
+      }
+
       await fetch(`/api/events/${selectedDate}/attach-menu`, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          menu_name: menu,
+          menu_name: menuName,
           org_id: "org-dev",
           hall: applyAllHalls ? null : selectedEventHall,
         }),
@@ -307,14 +326,15 @@ export default function EventsPage() {
                 </select>
               </label>
             ) : (
-              <label className="text-sm text-slate-300 flex flex-col gap-1 md:col-span-3 opacity-70">
-                Subir archivo / imagen (OCR próximamente)
+              <label className="text-sm text-slate-300 flex flex-col gap-1 md:col-span-3">
+                Subir archivo / imagen (OCR Mistral)
                 <input
                   type="file"
-                  disabled
+                  accept=".jpg,.jpeg,.png,.pdf"
+                  onChange={(e) => setMenuFile(e.target.files?.[0] ?? null)}
                   className="rounded bg-slate-900 border border-dashed border-white/20 px-3 py-2 text-sm"
                 />
-                <span className="text-[11px] text-slate-400">Versión actual: usa menú de BD. OCR se activará después.</span>
+                <span className="text-[11px] text-slate-400">Procesamos con OCR server-side; máx 10MB.</span>
               </label>
             )}
           </div>
