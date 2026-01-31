@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef, ChangeEvent } from "react";
 
 type ReceptionRow = { id: string; expected_qty: number; received_qty: number; status: string };
 type AlertRow = { type: string; message: string; reception_id: string };
@@ -12,6 +12,8 @@ export default function ReceptionsPage() {
   const [recvId, setRecvId] = useState("");
   const [recvQty, setRecvQty] = useState<number | "">("");
   const [message, setMessage] = useState("");
+  const [ocrNote, setOcrNote] = useState<string>("");
+  const ocrInputRef = useRef<HTMLInputElement | null>(null);
 
   const seedDemo = useCallback(async () => {
     await fetch("/api/receptions", {
@@ -77,6 +79,21 @@ useEffect(() => {
     await refresh();
   }
 
+  async function handleOcrUpload(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const form = new FormData();
+    form.append("file", file);
+    const res = await fetch("/api/ocr?kind=albaran", { method: "POST", body: form });
+    const json = await res.json();
+    if (json?.data?.text) {
+      setOcrNote(`OCR albarán: ${json.data.text}`);
+    } else {
+      setOcrNote("No se pudo leer el albarán");
+    }
+    e.target.value = "";
+  }
+
   return (
     <main className="min-h-screen bg-slate-950 text-white px-6 py-10 space-y-8">
       <header className="space-y-2">
@@ -90,7 +107,22 @@ useEffect(() => {
         <div className="flex flex-wrap gap-2 text-sm text-slate-200">
           <button onClick={seedDemo} className="rounded-md border border-white/15 px-3 py-1 hover:bg-white/10">Cargar demo</button>
           <button onClick={refresh} className="rounded-md border border-white/15 px-3 py-1 hover:bg-white/10">Recargar</button>
+          <button
+            onClick={() => ocrInputRef.current?.click()}
+            className="rounded-md border border-emerald-300/50 px-3 py-1 text-emerald-200 hover:bg-emerald-300/10"
+          >
+            Escanear albarán
+          </button>
+          <input
+            ref={ocrInputRef}
+            type="file"
+            accept="image/*,.pdf,.txt"
+            className="hidden"
+            onChange={handleOcrUpload}
+            aria-label="ocr-upload"
+          />
           {message && <span className="text-emerald-200 text-xs">{message}</span>}
+          {ocrNote && <span className="text-emerald-200 text-xs" aria-label="ocr-note">{ocrNote}</span>}
         </div>
         <div className="grid gap-3 md:grid-cols-3 text-sm">
           <label className="flex flex-col gap-1">

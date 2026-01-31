@@ -343,6 +343,7 @@ export default function EventsPage() {
               type="button"
               onClick={handleAttach}
               disabled={attaching || !selectedDate || (!applyAllHalls && !selectedEventHall)}
+              aria-label="adjuntar-menu"
               className="rounded-lg bg-emerald-500 text-black font-semibold px-4 py-2 disabled:opacity-60"
             >
               {attaching ? "Adjuntando..." : applyAllHalls ? "Adjuntar menú a todos" : "Adjuntar solo a salón"}
@@ -351,6 +352,7 @@ export default function EventsPage() {
               type="button"
               onClick={handleSheet}
               disabled={loadingSheet || !selectedDate || !selectedEventHall}
+              aria-label="generar-hoja"
               className="rounded-lg bg-white/10 border border-white/10 px-4 py-2 disabled:opacity-60"
             >
               {loadingSheet ? "Generando..." : "Generar hoja producción/compras"}

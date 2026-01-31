@@ -19,8 +19,13 @@ test.describe('Eventos flujo completo (importar → menú → hoja)', () => {
     await hallSelect.selectOption(hasRosalia ? 'ROSALIA' : 'ALL');
 
     // Adjuntar menú y generar hoja
-    await page.getByRole('button', { name: /Adjuntar menú/i }).click({ force: true });
-    await page.getByRole('button', { name: /Generar hoja/ }).click({ force: true });
+    const attachBtn = page.getByLabel('adjuntar-menu');
+    await attachBtn.scrollIntoViewIfNeeded();
+    await attachBtn.click({ force: true });
+
+    const hojaBtn = page.getByLabel('generar-hoja');
+    await hojaBtn.scrollIntoViewIfNeeded();
+    await hojaBtn.click({ force: true });
 
     // Validar hoja generada para el salón
     const sheetTable = page.getByRole('table', { name: 'event-sheets-table' });
