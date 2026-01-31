@@ -347,6 +347,14 @@ begin
 end;
 $$;
 
+-- Edge cron helper (usable from Next/Edge)
+create or replace function invoke_refresh_dashboards() returns void language sql as $$
+  perform refresh_dashboards();
+$$;
+
+comment on function refresh_dashboards() is 'Refresca forecast_delta, kpi_alert_counts y kpi_upcoming_events';
+comment on function invoke_refresh_dashboards() is 'Llamar desde cron/edge: select invoke_refresh_dashboards();';
+
 -- Generic alert helper
 create or replace function create_alert(p_org uuid, p_category text, p_message text)
 returns void language plpgsql as $$
