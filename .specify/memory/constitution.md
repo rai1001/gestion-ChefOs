@@ -50,3 +50,4 @@
 - Esta constitución prima sobre otras guías locales.  
 - Cambios requieren documento de enmienda y acuerdo del responsable de dominio.  
 - Toda revisión debe validar cumplimiento de estos principios y restricciones.
+777

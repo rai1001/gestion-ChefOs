@@ -22,7 +22,9 @@ Auth: Supabase session vía `proxy` (App Router). Modo E2E/stub (`NEXT_PUBLIC_E2
 - `GET /api/labels` – lista lotes creados.
 
 ## Compras y Recepción (US4)
-- `POST /api/purchases/sheet` – `{ items:[{supplier,product,quantity,unit,lead_time_days,delivery_days?}] }` → agrupado por proveedor; `GET /api/purchases/sheet` devuelve último.
+- `GET /api/purchases/suppliers` – lista proveedores (lead_time, cutoff, días de reparto, prep/ship) desde Supabase o stub E2E.
+- `GET /api/purchases/products` – catálogo por proveedor (no descuenta inventario).
+- `POST /api/purchases/sheet` – `{ items:[{supplier,product,quantity,unit,event_date?,supplier_config?}] }` → calcula fecha límite y ETA de entrega; `GET /api/purchases/sheet` devuelve último.
 - `GET/POST/DELETE /api/receptions` – listar/crear/resetear recepciones.
 - `POST /api/receptions/:id/lines` – registrar parcial `{ qty, received_at }`.
 - `PATCH /api/receptions/:id/lines` – finalizar; devuelve alertas.
@@ -37,6 +39,7 @@ Auth: Supabase session vía `proxy` (App Router). Modo E2E/stub (`NEXT_PUBLIC_E2
 ## Alerts & Cron
 - `GET /api/alerts` – lista alertas generadas.
 - `GET /api/cron/refresh-dashboards` – stub; en prod debe refrescar materialized views + alert sweep.
+- `POST /api/ocr?kind=menu|albaran|receta|generico` – multipart file; usa Mistral Vision si `MISTRAL_API_KEY` existe, stub en E2E.
 
 ## Pages
 `/forecasts`, `/events`, `/tasks`, `/purchases`, `/receptions`, `/inventory`, `/dashboards`, `/mobile/turnos`.

@@ -5,6 +5,7 @@ export type Reception = {
   expected_date: string; // ISO date
   received_qty: number;
   status: "open" | "partial" | "completed";
+  delayed: boolean;
 };
 
 export type Alert = {
@@ -13,12 +14,14 @@ export type Alert = {
   reception_id: string;
 };
 
-const receptions = new Map<string, Reception>();
-const alerts: Alert[] = [];
+const globalStore = (globalThis as any).__receptionsStore ?? { receptions: new Map<string, Reception>() };
+if (!(globalThis as any).__receptionsStore) {
+  (globalThis as any).__receptionsStore = globalStore;
+}
+const receptions: Map<string, Reception> = globalStore.receptions;
 
 export function resetReceptionsStore() {
   receptions.clear();
-  alerts.length = 0;
 }
 
 export function createReception(input: { id: string; org_id: string; expected_qty: number; expected_date: string }) {
@@ -29,6 +32,7 @@ export function createReception(input: { id: string; org_id: string; expected_qt
     expected_date: input.expected_date,
     received_qty: 0,
     status: "open",
+    delayed: false,
   };
   receptions.set(rec.id, rec);
   return rec;
@@ -39,7 +43,12 @@ export function listReceptions() {
 }
 
 export function listAlerts() {
-  return alerts.slice();
+  const alerts: Alert[] = [];
+  for (const rec of receptions.values()) {
+    if (rec.delayed) alerts.push({ type: "delay", message: "Entrega retrasada", reception_id: rec.id });
+    if (rec.received_qty < rec.expected_qty) alerts.push({ type: "shortage", message: "Falta cantidad por recibir", reception_id: rec.id });
+  }
+  return alerts;
 }
 
 export function receivePartial(id: string, qty: number, received_at: string) {
@@ -49,19 +58,13 @@ export function receivePartial(id: string, qty: number, received_at: string) {
   rec.status = rec.received_qty >= rec.expected_qty ? "completed" : "partial";
 
   const isLate = received_at > rec.expected_date;
-  if (isLate) {
-    alerts.push({ type: "delay", message: "Entrega retrasada", reception_id: rec.id });
-  }
+  rec.delayed = rec.delayed || isLate;
   return rec;
 }
 
 export function finalizeReception(id: string) {
   const rec = receptions.get(id);
   if (!rec) throw new Error("reception not found");
-  if (rec.received_qty < rec.expected_qty) {
-    alerts.push({ type: "shortage", message: "Falta cantidad por recibir", reception_id: rec.id });
-  }
   rec.status = rec.received_qty >= rec.expected_qty ? "completed" : "partial";
   return rec;
 }
-

@@ -133,6 +133,7 @@ create table if not exists products (
   name text not null,
   sku text,
   unit text,
+  category text,
   cost_cents integer default 0,
   created_at timestamptz default now() not null
 );
@@ -142,6 +143,12 @@ create table if not exists suppliers (
   org_id uuid references organizations(id) on delete cascade not null,
   name text not null,
   lead_time_days integer default 0,
+  delivery_days integer[] default '{}',
+  cutoff_time text,
+  prep_hours integer default 0,
+  ship_hours integer default 0,
+  contact_phone text,
+  contact_email text,
   created_at timestamptz default now() not null
 );
 
@@ -162,6 +169,16 @@ create table if not exists purchase_lines (
   quantity numeric not null default 0,
   unit text not null default 'ud',
   price_cents integer default 0,
+  created_at timestamptz default now() not null
+);
+
+create table if not exists supplier_products (
+  id uuid primary key default gen_random_uuid(),
+  org_id uuid references organizations(id) on delete cascade not null,
+  supplier_id uuid references suppliers(id) on delete cascade,
+  product_id uuid references products(id) on delete cascade,
+  price_cents integer default 0,
+  active boolean default true,
   created_at timestamptz default now() not null
 );
 
@@ -237,6 +254,7 @@ create index if not exists idx_labels_org on labels(org_id);
 create index if not exists idx_inventory_lots_org on inventory_lots(org_id);
 create index if not exists idx_purchase_orders_org on purchase_orders(org_id);
 create index if not exists idx_purchase_lines_order on purchase_lines(order_id);
+create index if not exists idx_supplier_products_org on supplier_products(org_id, supplier_id);
 create index if not exists idx_receptions_org on receptions(org_id);
 create index if not exists idx_reception_lines_reception on reception_lines(reception_id);
 create index if not exists idx_vacations_org on vacations(org_id);
@@ -256,6 +274,7 @@ alter table purchase_lines enable row level security;
 alter table receptions enable row level security;
 alter table reception_lines enable row level security;
 alter table suppliers enable row level security;
+alter table supplier_products enable row level security;
 alter table products enable row level security;
 alter table employees enable row level security;
 alter table shifts enable row level security;
@@ -276,6 +295,7 @@ create policy if not exists org_isolation_purchase_lines on purchase_lines using
 create policy if not exists org_isolation_receptions on receptions using (org_id = current_setting('request.jwt.claims'::text)::json->>'org_id');
 create policy if not exists org_isolation_reception_lines on reception_lines using (org_id = current_setting('request.jwt.claims'::text)::json->>'org_id');
 create policy if not exists org_isolation_suppliers on suppliers using (org_id = current_setting('request.jwt.claims'::text)::json->>'org_id');
+create policy if not exists org_isolation_supplier_products on supplier_products using (org_id = current_setting('request.jwt.claims'::text)::json->>'org_id');
 create policy if not exists org_isolation_products on products using (org_id = current_setting('request.jwt.claims'::text)::json->>'org_id');
 create policy if not exists org_isolation_employees on employees using (org_id = current_setting('request.jwt.claims'::text)::json->>'org_id');
 create policy if not exists org_isolation_shifts on shifts using (org_id = current_setting('request.jwt.claims'::text)::json->>'org_id');
@@ -317,6 +337,22 @@ $$;
 -- Event sheets helper view
 create view if not exists event_sheets as
 select e.id as event_id, e.org_id, e.event_date, e.attendees, e.menu_id from events e;
+
+-- Supplier catalog view to expose product names + supplier info
+create view if not exists supplier_products_view as
+select sp.id,
+       sp.org_id,
+       sp.supplier_id,
+       s.name as supplier_name,
+       sp.product_id,
+       p.name as product_name,
+       p.unit,
+       p.category,
+       sp.price_cents
+from supplier_products sp
+join suppliers s on s.id = sp.supplier_id
+join products p on p.id = sp.product_id
+where coalesce(sp.active, true) = true;
 
 -- Alerts KPI materialized view and refresh
 create materialized view if not exists kpi_alert_counts as
