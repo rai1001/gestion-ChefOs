@@ -9,6 +9,9 @@ export default function DashboardsPage() {
   const [alerts, setAlerts] = useState<AlertSummary[]>([]);
   const [deltas, setDeltas] = useState<ForecastDelta[]>([]);
   const [upcoming, setUpcoming] = useState<UpcomingEvent[]>([]);
+  const alertCount = alerts[0]?.alert_count ?? 0;
+  const deltaAvg =
+    deltas.length === 0 ? 0 : Math.round(deltas.reduce((acc, d) => acc + d.delta, 0) / deltas.length);
 
   useEffect(() => {
     fetch("/api/alerts")
@@ -28,26 +31,52 @@ export default function DashboardsPage() {
       <header className="space-y-2">
         <p className="text-xs uppercase tracking-[0.2em] text-emerald-300">KPIs</p>
         <h1 className="text-3xl font-semibold">Dashboards</h1>
-        <p className="text-slate-300">Alertas y tendencias de previsión.</p>
+        <p className="text-slate-300">Alertas, previsión y eventos próximos.</p>
       </header>
 
       <section className="grid gap-4 md:grid-cols-3">
-        <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+        <div className="bg-white/5 border border-white/10 rounded-xl p-4 space-y-1">
           <p className="text-sm text-slate-300">Alertas</p>
           <p className="text-3xl font-semibold" data-testid="alerts-count">
-            {alerts[0]?.alert_count ?? 0}
+            {alertCount}
           </p>
+          <p className="text-xs text-slate-400">Pendientes de revisión</p>
         </div>
+        <div className="bg-white/5 border border-white/10 rounded-xl p-4 space-y-1">
+          <p className="text-sm text-slate-300">Próximos eventos (30d)</p>
+          <p className="text-3xl font-semibold">{upcoming.length}</p>
+          <p className="text-xs text-slate-400">Sumariza salones y tipos</p>
+        </div>
+        <div className="bg-white/5 border border-white/10 rounded-xl p-4 space-y-1">
+          <p className="text-sm text-slate-300">Δ desayunos promedio</p>
+          <p className="text-3xl font-semibold">{deltaAvg}</p>
+          <p className="text-xs text-slate-400">Delta medio de previsión vs real</p>
+        </div>
+      </section>
+
+      <section className="grid gap-4 md:grid-cols-3">
         <div className="bg-white/5 border border-white/10 rounded-xl p-4 md:col-span-2 space-y-3">
-          <p className="text-sm text-slate-300">Deltas previsión</p>
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-slate-300">Deltas previsión</p>
+            <span className="text-xs text-slate-500">{deltas.length} días</span>
+          </div>
           <ul className="text-sm space-y-1" aria-label="delta-list">
             {deltas.length === 0 && <li>Sin datos</li>}
             {deltas.map((d) => (
-              <li key={d.forecast_date} data-testid="delta-item">
-                {d.forecast_date}: {d.delta}
+              <li key={d.forecast_date} data-testid="delta-item" className="flex justify-between">
+                <span>{d.forecast_date}</span>
+                <span className={d.delta >= 0 ? "text-emerald-300" : "text-rose-300"}>{d.delta}</span>
               </li>
             ))}
           </ul>
+        </div>
+
+        <div className="bg-white/5 border border-white/10 rounded-xl p-4 space-y-3">
+          <p className="text-sm text-slate-300">Alertas recientes</p>
+          <p className="text-xs text-slate-500">Stub E2E: sin detalle</p>
+          <div className="rounded-lg border border-white/10 bg-white/5 p-3 text-sm text-slate-300">
+            Usa `/api/alerts` para lista detallada; en prod conectar con tabla `alerts`.
+          </div>
         </div>
       </section>
 
