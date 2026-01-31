@@ -28,6 +28,7 @@ corepack pnpm e2e        # Playwright (usa NEXT_PUBLIC_E2E=1 E2E=1 desde config)
 ## Performance budgets
 Ver `docs/perf-budgets.md` (imports <30s, dashboards <3s, alertas <1m).
 
-## Estado de test actual
-- Vitest: OK.
-- Playwright (stub/E2E): OK (`corepack pnpm e2e`).
+## CI / Estado de test
+- Vitest: OK (`corepack pnpm test`).
+- Playwright: OK (`corepack pnpm e2e`).
+- GitHub Actions: ![E2E](https://github.com/rai1001/gestion-ChefOs/actions/workflows/e2e.yml/badge.svg)
