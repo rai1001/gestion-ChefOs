@@ -59,11 +59,14 @@ export default function TasksPage() {
   }, [refresh]);
 
   async function handleStart(id: string) {
+    // Optimistic update so e2e can see the status immediately
+    setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, status: "in_progress" } : t)));
     await fetch(`/api/tasks/${id}/start`, { method: "POST" });
     await refresh();
   }
 
   async function handleFinish(id: string) {
+    setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, status: "done" } : t)));
     await fetch(`/api/tasks/${id}/finish`, { method: "POST" });
     await refresh();
   }
@@ -107,8 +110,8 @@ export default function TasksPage() {
     <main className="min-h-screen bg-slate-950 text-white px-4 md:px-8 py-10 space-y-8">
       <header className="space-y-2">
         <p className="text-xs uppercase tracking-[0.2em] text-emerald-300">Producción</p>
-        <h1 className="text-3xl md:text-4xl font-semibold">Tareas por turno (15 días)</h1>
-        <p className="text-slate-300">Planifica mise en place y producción por día/turno, con inicio/fin controlado.</p>
+        <h1 className="text-3xl md:text-4xl font-semibold">Producción y etiquetas</h1>
+        <p className="text-slate-300">Tareas por turno (15 días), mise en place, inicio/fin y creación de etiquetas.</p>
       </header>
 
       <div className="flex flex-wrap items-center gap-3 text-sm text-slate-300">

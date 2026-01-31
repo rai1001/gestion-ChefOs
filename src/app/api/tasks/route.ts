@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { listTasks, seedTask, startTask, finishTask } from "@/lib/tasks/store";
+import { listTasks, seedTask, startTask, finishTask, resetTasksStore } from "@/lib/tasks/store";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { TaskEntry, Shift } from "@/lib/tasks/types";
 import { randomUUID } from "crypto";
@@ -75,4 +75,13 @@ export async function POST(req: NextRequest) {
   } catch (err: any) {
     return NextResponse.json({ error: err?.message ?? "invalid" }, { status: 400 });
   }
+}
+
+// E2E helper: clear in-memory tasks store
+export async function DELETE() {
+  if (isE2E) {
+    resetTasksStore();
+    return NextResponse.json({ ok: true, mode: "e2e" });
+  }
+  return NextResponse.json({ error: "not allowed" }, { status: 405 });
 }
