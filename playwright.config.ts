@@ -23,6 +23,7 @@ export default defineConfig({
     env: {
       NEXT_PUBLIC_E2E: "1",
       E2E: "1",
+      NEXT_DISABLE_REACT_DEV_OVERLAY: "1",
     },
     url: "http://localhost:3000",
     reuseExistingServer: !process.env.CI,
