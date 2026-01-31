@@ -90,3 +90,17 @@ export function addLot(org_id: string, lot_id: string, product_id?: string, expi
     label_id: `LBL-${lot_id}`,
   });
 }
+
+export function addLotWithQuantity(input: { org_id: string; product_id?: string; quantity?: number; expires_at?: string }) {
+  const lot_id = randomUUID();
+  lots.set(lot_id, {
+    id: lot_id,
+    org_id: input.org_id,
+    product_id: input.product_id,
+    quantity: input.quantity ?? 1,
+    unit: "ud",
+    expires_at: input.expires_at ?? new Date().toISOString().slice(0, 10),
+    label_id: `LBL-${lot_id}`,
+  });
+  return lots.get(lot_id)!;
+}

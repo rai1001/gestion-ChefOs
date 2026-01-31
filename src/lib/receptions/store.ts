@@ -9,7 +9,7 @@ export type Reception = {
 };
 
 export type Alert = {
-  type: "delay" | "shortage";
+  type: "delay" | "shortage" | "expiry";
   message: string;
   reception_id: string;
 };
@@ -44,9 +44,30 @@ export function listReceptions() {
 
 export function listAlerts() {
   const alerts: Alert[] = [];
+  const todayIso = new Date().toISOString().slice(0, 10);
   for (const rec of receptions.values()) {
-    if (rec.delayed) alerts.push({ type: "delay", message: "Entrega retrasada", reception_id: rec.id });
+    const isLate = rec.delayed || rec.expected_date < todayIso;
+    if (isLate) alerts.push({ type: "delay", message: "Entrega retrasada", reception_id: rec.id });
     if (rec.received_qty < rec.expected_qty) alerts.push({ type: "shortage", message: "Falta cantidad por recibir", reception_id: rec.id });
+  }
+  // inventory expiry alerts (E2E store)
+  try {
+    const { listLots } = require("../tasks/store");
+    const lots = listLots() as Array<{ id: string; expires_at?: string; product_id?: string }>;
+    const soonDate = new Date(Date.now() + 2 * 86400000); // 48h
+    for (const lot of lots) {
+      if (!lot.expires_at) continue;
+      const exp = new Date(lot.expires_at);
+      if (exp <= soonDate) {
+        alerts.push({
+          type: "expiry",
+          message: `Caduca pronto: ${lot.product_id ?? "lote"} (${lot.expires_at})`,
+          reception_id: lot.id,
+        });
+      }
+    }
+  } catch {
+    // ignore if store not available
   }
   return alerts;
 }
@@ -66,5 +87,8 @@ export function finalizeReception(id: string) {
   const rec = receptions.get(id);
   if (!rec) throw new Error("reception not found");
   rec.status = rec.received_qty >= rec.expected_qty ? "completed" : "partial";
+  // mark delayed if a finalization happens after expected date without full qty
+  const todayIso = new Date().toISOString().slice(0, 10);
+  if (todayIso > rec.expected_date && rec.received_qty < rec.expected_qty) rec.delayed = true;
   return rec;
 }

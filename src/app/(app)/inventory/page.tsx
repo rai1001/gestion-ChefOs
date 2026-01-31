@@ -11,10 +11,18 @@ export default function InventoryPage() {
   const [newExpiry, setNewExpiry] = useState("");
 
   async function refresh() {
-    const res = await fetch("/api/labels");
+    const res = await fetch("/api/inventory/lots");
     const json = await res.json();
     if (Array.isArray(json.data)) {
-      setLots(json.data.map((l: any) => ({ id: l.id, product_id: l.product_id ?? "prod", quantity: l.quantity ?? 1, unit_cost: 100 })));
+      setLots(
+        json.data.map((l: any) => ({
+          id: l.id,
+          product_id: l.product_id ?? "prod",
+          quantity: l.quantity ?? 1,
+          unit_cost: 100,
+          expires_at: l.expires_at,
+        })),
+      );
     } else {
       setLots([]);
     }
@@ -45,18 +53,15 @@ export default function InventoryPage() {
 
   async function createLotManual() {
     if (!newProd || !newExpiry || newQty === "") return;
-    const taskId = `inv-${Date.now()}`;
-    await fetch("/api/tasks", {
+    await fetch("/api/inventory/lots", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ id: taskId, title: `Etiqueta ${newProd}`, org_id: "org-dev" }),
-    });
-    await fetch(`/api/tasks/${taskId}/start`, { method: "POST" });
-    await fetch(`/api/tasks/${taskId}/finish`, { method: "POST" });
-    await fetch("/api/labels", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ task_id: taskId, org_id: "org-dev", expires_at: newExpiry, product_id: newProd }),
+      body: JSON.stringify({
+        org_id: "org-dev",
+        product_id: newProd,
+        quantity: Number(newQty),
+        expires_at: newExpiry,
+      }),
     });
     await refresh();
     setMessage("Lote añadido");
@@ -100,6 +105,7 @@ export default function InventoryPage() {
             <tr>
               <th className="text-left py-2">Lote</th>
               <th className="text-left py-2">Prod</th>
+              <th className="text-left py-2">Caducidad</th>
               <th className="text-left py-2">Cantidad</th>
             </tr>
           </thead>
@@ -109,6 +115,7 @@ export default function InventoryPage() {
               <tr key={lot.id} data-testid="inventory-row">
                 <td className="py-2">{lot.id}</td>
                 <td className="py-2">{lot.product_id}</td>
+                <td className="py-2">{(lot as any).expires_at ?? "—"}</td>
                 <td className="py-2">{lot.quantity}</td>
               </tr>
             ))}

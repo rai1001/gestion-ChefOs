@@ -93,6 +93,23 @@ useEffect(() => {
     const json = await res.json();
     if (json?.data?.text) {
       setOcrNote(`OCR albarán: ${json.data.text}`);
+      // Crear lotes en inventario a partir de líneas OCR si existen
+      if (Array.isArray(json.data.lines) && json.data.lines.length > 0) {
+        for (const line of json.data.lines) {
+          await fetch("/api/inventory/lots", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+              org_id: "org-dev",
+              product_id: line.item || "Producto OCR",
+              quantity: line.qty ?? 1,
+              expires_at: json.data.date ?? new Date().toISOString().slice(0, 10),
+            }),
+          });
+        }
+        setMessage("Lotes creados desde albarán OCR");
+        await refresh();
+      }
     } else {
       setOcrNote("No se pudo leer el albarán");
     }
