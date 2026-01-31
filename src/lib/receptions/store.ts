@@ -42,7 +42,7 @@ export function listReceptions() {
   return Array.from(receptions.values());
 }
 
-import { listLots } from "../tasks/store";
+import { listLots, listTasks } from "../tasks/store";
 
 export function listAlerts() {
   const alerts: Alert[] = [];
@@ -64,6 +64,19 @@ export function listAlerts() {
         type: "expiry",
         message: `Caduca pronto: ${lot.product_id ?? "lote"} (${lot.expires_at})`,
         reception_id: lot.id,
+      });
+    }
+  }
+  // pending tasks overdue (E2E only)
+  // pending tasks overdue (E2E only)
+  const tasks = listTasks();
+  for (const task of tasks) {
+    if (task.status === "done") continue;
+    if (task.due_date < todayIso) {
+      alerts.push({
+        type: "delay",
+        message: `Tarea pendiente: ${task.title}`,
+        reception_id: task.id,
       });
     }
   }

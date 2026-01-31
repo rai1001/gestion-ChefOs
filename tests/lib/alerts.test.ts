@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { resetReceptionsStore, createReception, receivePartial, finalizeReception, listAlerts } from "@/lib/receptions/store";
-import { resetTasksStore, addLotWithQuantity } from "@/lib/tasks/store";
+import { resetTasksStore, addLotWithQuantity, seedTask } from "@/lib/tasks/store";
 
 describe("alerts", () => {
   beforeEach(() => {
@@ -37,5 +37,21 @@ describe("alerts", () => {
     // listAlerts uses Date.now(); ensure deterministic window
     const alerts = listAlerts();
     expect(alerts.some((a) => a.type === "expiry")).toBe(true);
+  });
+
+  it("emits pending alert for overdue task", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-02-05T00:00:00Z"));
+    seedTask({
+      id: "t-overdue",
+      org_id: "org",
+      title: "Mise en place",
+      status: "pending",
+      due_date: "2026-02-04",
+      shift: "morning",
+      priority: "high",
+    } as any);
+    const alerts = listAlerts();
+    expect(alerts.some((a) => a.type === "delay")).toBe(true);
   });
 });
