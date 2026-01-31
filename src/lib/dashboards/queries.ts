@@ -1,5 +1,5 @@
 import { supabaseClient } from "@/lib/supabase/client";
-import { listLots } from "@/lib/tasks/store";
+import { listLots, listTasks } from "@/lib/tasks/store";
 
 export type AlertSummary = { org_id: string; alert_count: number };
 export type ExpirySummary = { lot_id: string; product_id?: string; expires_at?: string };
@@ -13,12 +13,30 @@ export async function getAlertSummary(org_id: string): Promise<AlertSummary[]> {
     const today = new Date();
     const soon = new Date(today.getTime() + 2 * 86400000).toISOString().slice(0, 10);
     const alertCount = lots.filter((l) => l.expires_at && l.expires_at <= soon).length;
-    return [{ org_id, alert_count: alertCount }];
+    const tasks = listTasks();
+    const overdue = tasks.filter((t) => t.status !== "done" && t.due_date < today.toISOString().slice(0, 10)).length;
+    return [{ org_id, alert_count: alertCount + overdue }];
   }
   const supabase = supabaseClient();
   const { data, error } = await supabase.from("kpi_alert_counts").select("*").eq("org_id", org_id);
   if (error) throw error;
-  return (data as AlertSummary[]) ?? [];
+  let count = (data as AlertSummary[]) ?? [];
+
+  // add overdue tasks count
+  const today = new Date().toISOString().slice(0, 10);
+  const { data: tasks, error: taskErr } = await supabase
+    .from("tasks")
+    .select("id")
+    .eq("org_id", org_id)
+    .neq("status", "done")
+    .lt("due_date", today);
+  if (!taskErr && tasks) {
+    const extra = tasks.length;
+    if (count.length === 0) count = [{ org_id, alert_count: extra }];
+    else count = count.map((c) => ({ ...c, alert_count: c.alert_count + extra }));
+  }
+
+  return count;
 }
 
 export async function getExpirySoon(org_id: string, daysAhead = 2): Promise<ExpirySummary[]> {

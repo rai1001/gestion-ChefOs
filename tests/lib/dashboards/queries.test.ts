@@ -1,7 +1,21 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeEach } from "vitest";
 import { getAlertSummary, getForecastDelta } from "@/lib/dashboards/queries";
+import { resetTasksStore, seedTask } from "@/lib/tasks/store";
 
 describe("dashboards queries (E2E stub)", () => {
+  beforeEach(() => {
+    resetTasksStore();
+    seedTask({
+      id: "over-1",
+      org_id: "org-test",
+      title: "Overdue",
+      status: "pending",
+      due_date: "2026-01-01",
+      shift: "morning",
+      priority: "high",
+    } as any);
+  });
+
   it("returns alert summary stub", async () => {
     process.env.NEXT_PUBLIC_E2E = "1";
     process.env.E2E = "1";
