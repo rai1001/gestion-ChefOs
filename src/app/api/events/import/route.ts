@@ -10,6 +10,17 @@ export async function POST(req: NextRequest) {
     const orgId = req.headers.get("x-org-id") || "org-dev";
 
     if (isE2E) {
+      if (contentType.includes("multipart/form-data")) {
+        const form = await req.formData();
+        const file = form.get("file");
+        if (!file || typeof file === "string") {
+          return NextResponse.json({ error: "file required" }, { status: 400 });
+        }
+        const buffer = Buffer.from(await (file as Blob).arrayBuffer());
+        const rows = parseEventsXlsx(buffer).map((r) => ({ ...r, org_id: orgId }));
+        upsertEventEntries(rows);
+        return NextResponse.json({ status: "ok", mode: "e2e", count: rows.length });
+      }
       const body = await req.json();
       const rows = Array.isArray(body.rows) ? body.rows : body;
       upsertEventEntries(rows.map((r: any) => ({ ...r, org_id: orgId })));

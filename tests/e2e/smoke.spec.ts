@@ -6,7 +6,11 @@ test.describe("smoke", () => {
   for (const path of pages) {
     test(`loads ${path}`, async ({ page }) => {
       await page.goto(path);
-      await expect(page).toHaveURL(new RegExp(`${path.replace("/", "\\/")}$`, "i"));
+      if (path === "/") {
+        await expect(page).toHaveURL(/\/forecasts$/i);
+      } else {
+        await expect(page).toHaveURL(new RegExp(`${path.replace("/", "\\/")}$`, "i"));
+      }
     });
   }
 });
