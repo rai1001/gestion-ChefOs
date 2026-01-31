@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import { resetReceptionsStore, createReception, receivePartial, finalizeReception, listAlerts } from "@/lib/receptions/store";
 import { resetTasksStore, addLotWithQuantity } from "@/lib/tasks/store";
 
@@ -26,7 +26,15 @@ describe("alerts", () => {
   });
 
   it("emits expiry alert for inventory lots expiring soon", () => {
-    addLotWithQuantity({ org_id: "org", product_id: "YOGUR", quantity: 5, expires_at: new Date(Date.now() + 1 * 86400000).toISOString().slice(0, 10) });
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-02-01T00:00:00Z"));
+    addLotWithQuantity({
+      org_id: "org",
+      product_id: "YOGUR",
+      quantity: 5,
+      expires_at: "2026-02-02",
+    });
+    // listAlerts uses Date.now(); ensure deterministic window
     const alerts = listAlerts();
     expect(alerts.some((a) => a.type === "expiry")).toBe(true);
   });

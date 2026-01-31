@@ -42,32 +42,30 @@ export function listReceptions() {
   return Array.from(receptions.values());
 }
 
+import { listLots } from "../tasks/store";
+
 export function listAlerts() {
   const alerts: Alert[] = [];
-  const todayIso = new Date().toISOString().slice(0, 10);
+  const now = new Date();
+  const todayIso = now.toISOString().slice(0, 10);
   for (const rec of receptions.values()) {
     const isLate = rec.delayed || rec.expected_date < todayIso;
     if (isLate) alerts.push({ type: "delay", message: "Entrega retrasada", reception_id: rec.id });
     if (rec.received_qty < rec.expected_qty) alerts.push({ type: "shortage", message: "Falta cantidad por recibir", reception_id: rec.id });
   }
   // inventory expiry alerts (E2E store)
-  try {
-    const { listLots } = require("../tasks/store");
-    const lots = listLots() as Array<{ id: string; expires_at?: string; product_id?: string }>;
-    const soonDate = new Date(Date.now() + 2 * 86400000); // 48h
-    for (const lot of lots) {
-      if (!lot.expires_at) continue;
-      const exp = new Date(lot.expires_at);
-      if (exp <= soonDate) {
-        alerts.push({
-          type: "expiry",
-          message: `Caduca pronto: ${lot.product_id ?? "lote"} (${lot.expires_at})`,
-          reception_id: lot.id,
-        });
-      }
+  const lots = listLots() as Array<{ id: string; expires_at?: string; product_id?: string }>;
+  const soonDate = new Date(now.getTime() + 2.5 * 86400000); // ~60h buffer
+  for (const lot of lots) {
+    if (!lot.expires_at) continue;
+    const exp = new Date(lot.expires_at + "T00:00:00Z");
+    if (exp <= soonDate) {
+      alerts.push({
+        type: "expiry",
+        message: `Caduca pronto: ${lot.product_id ?? "lote"} (${lot.expires_at})`,
+        reception_id: lot.id,
+      });
     }
-  } catch {
-    // ignore if store not available
   }
   return alerts;
 }
