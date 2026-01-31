@@ -1,23 +1,5 @@
 import { randomUUID } from "crypto";
-
-export type TaskEntry = {
-  id: string;
-  org_id: string;
-  title: string;
-  status: "pending" | "in_progress" | "done";
-  started_at?: string;
-  finished_at?: string;
-};
-
-export type InventoryLot = {
-  id: string;
-  org_id: string;
-  product_id?: string;
-  quantity?: number;
-  unit?: string;
-  expires_at: string;
-  label_id: string;
-};
+import { TaskEntry, InventoryLot, Shift } from "./types";
 
 const tasks = new Map<string, TaskEntry>();
 const lots = new Map<string, InventoryLot>();
@@ -31,8 +13,14 @@ export function seedTask(task: TaskEntry) {
   tasks.set(task.id, task);
 }
 
-export function listTasks() {
-  return Array.from(tasks.values());
+export function listTasks(filters?: { from?: string; to?: string; shift?: Shift }) {
+  const all = Array.from(tasks.values());
+  return all.filter((t) => {
+    if (filters?.shift && t.shift !== filters.shift) return false;
+    if (filters?.from && t.due_date < filters.from) return false;
+    if (filters?.to && t.due_date > filters.to) return false;
+    return true;
+  });
 }
 
 export function startTask(id: string) {
