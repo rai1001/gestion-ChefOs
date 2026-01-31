@@ -25,13 +25,15 @@ jobs:
           node-version: 20
 
       - name: Enable corepack
-        run: corepack enable
+        run: |
+          corepack enable
+          corepack prepare pnpm@9.12.3 --activate
 
       - name: Install deps
-        run: corepack pnpm install --no-frozen-lockfile
+        run: pnpm install --no-frozen-lockfile
 
       - name: Run unit tests
         run: pnpm vitest run "tests/**/*.test.ts"
 
       - name: Run e2e (Playwright)
-        run: corepack pnpm e2e
+        run: pnpm e2e
