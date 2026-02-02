@@ -43,18 +43,21 @@ export default function EventsPage() {
   });
   const importInputRef = useRef<HTMLInputElement | null>(null);
 
+  const isIsoDate = (d: string) => /^\d{4}-\d{2}-\d{2}$/.test(d);
+  const calendarRows = useMemo(() => rows.filter((r) => isIsoDate(r.event_date)), [rows]);
+
   const sortedRows = useMemo(() => {
-    return [...rows].sort((a, b) => {
+    return [...calendarRows].sort((a, b) => {
       if (a.event_date === b.event_date) {
         return hallIndex(a.hall) - hallIndex(b.hall);
       }
       return a.event_date < b.event_date ? -1 : 1;
     });
-  }, [rows]);
+  }, [calendarRows]);
 
   const eventsByDay = useMemo(() => {
     const map = new Map<string, EventRow[]>();
-    for (const r of rows) {
+    for (const r of calendarRows) {
       const list = map.get(r.event_date) ?? [];
       list.push(r);
       map.set(r.event_date, list);
@@ -64,7 +67,7 @@ export default function EventsPage() {
       map.set(date, list);
     }
     return map;
-  }, [rows]);
+  }, [calendarRows]);
 
   const selectedDayEvents = selectedDate ? eventsByDay.get(selectedDate) ?? [] : [];
 
@@ -86,27 +89,27 @@ export default function EventsPage() {
 
   const refresh = useCallback(async () => {
     try {
-      const res = await fetch("/api/events");
-      const json = await res.json();
-      const data = (json.data as EventRow[]) ?? [];
-      setRows(data);
-      if (!selectedDate && data.length > 0) {
-        const byDay = data.reduce<Record<string, EventRow[]>>((acc, r) => {
-          const list = acc[r.event_date] ?? [];
-          list.push(r);
-          acc[r.event_date] = list;
-          return acc;
-        }, {});
-        const todayIso = new Date().toISOString().slice(0, 10);
-        const pick = byDay[todayIso]?.length ? todayIso : data[0].event_date;
-        setSelectedDate(pick);
-        const firstHall = (byDay[pick] ?? [])[0]?.hall ?? "";
-        setSelectedEventHall(firstHall);
-        // sitúa el calendario en el mes del primer evento
-        const firstDate = new Date(pick);
-        setMonthCursor(new Date(firstDate.getFullYear(), firstDate.getMonth(), 1));
-      }
-      setMessage("");
+    const res = await fetch("/api/events");
+    const json = await res.json();
+    const data = (json.data as EventRow[]) ?? [];
+    setRows(data);
+    const valid = data.filter((d) => isIsoDate(d.event_date));
+    if (!selectedDate && valid.length > 0) {
+      const byDay = valid.reduce<Record<string, EventRow[]>>((acc, r) => {
+        const list = acc[r.event_date] ?? [];
+        list.push(r);
+        acc[r.event_date] = list;
+        return acc;
+      }, {});
+      const todayIso = new Date().toISOString().slice(0, 10);
+      const pick = byDay[todayIso]?.length ? todayIso : valid[0].event_date;
+      setSelectedDate(pick);
+      const firstHall = (byDay[pick] ?? [])[0]?.hall ?? "";
+      setSelectedEventHall(firstHall);
+      const firstDate = new Date(pick);
+      setMonthCursor(new Date(firstDate.getFullYear(), firstDate.getMonth(), 1));
+    }
+    setMessage("");
     } catch {
       setRows([]);
       setError("No se pudo cargar eventos");
