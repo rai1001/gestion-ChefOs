@@ -19,7 +19,8 @@ export function parseForecastXlsx(buf: Buffer, isCsv = false): ForecastRow[] {
     : XLSX.read(buf, { type: "buffer" });
   const sheetName = workbook.SheetNames[0];
   const sheet = workbook.Sheets[sheetName];
-  const json = XLSX.utils.sheet_to_json<Record<string, any>>(sheet, { defval: null });
+  // Read raw rows (header:1) to target fixed columns: A = Fecha, W = Desayunos (index 22)
+  const json = XLSX.utils.sheet_to_json<any[]>(sheet, { defval: null, header: 1 });
 
   const normalizeDate = (val: any): string | null => {
     if (val === null || val === undefined || val === "") return null;
@@ -38,16 +39,15 @@ export function parseForecastXlsx(buf: Buffer, isCsv = false): ForecastRow[] {
 
   const rows = json
     .map((row) => {
-      const dateVal = row.fecha ?? row.date ?? row.Fecha ?? row.Date;
-      const guestsVal = row.ocupacion ?? row.guests ?? row.Ocupacion ?? row.Guests ?? row.Occupancy;
-      const breakfastsVal = row.desayunos ?? row.breakfasts ?? row.Desayunos ?? row.Breakfasts;
+      const dateVal = row[0]; // columna A
+      const breakfastsVal = row[22]; // columna W (0-index)
       const forecast_date = normalizeDate(dateVal);
       if (!forecast_date) return null;
       const breakfasts = Number(breakfastsVal ?? 0);
       if (Number.isNaN(breakfasts)) return null;
       return {
         forecast_date,
-        guests: Number(guestsVal ?? 0) || 0,
+        guests: 0,
         breakfasts,
       };
     })

@@ -69,19 +69,16 @@ export default function EventsPage() {
   const importInputRef = useRef<HTMLInputElement | null>(null);
 
   const calendarRows = useMemo(() => {
-    const seen = new Set<string>();
+    let counter = 0;
     return rows
       .map((r) => {
         const iso = normalizeDate(r.event_date);
-        return iso ? { ...r, event_date: iso } : null;
+        if (!iso) return null;
+        counter += 1;
+        // attach a stable unique key for rendering
+        return { ...r, event_date: iso, __key: `${iso}-${r.hall}-${counter}` };
       })
-      .filter((r): r is EventRow => r !== null)
-      .filter((r) => {
-        const key = `${r.event_date}-${r.hall}-${r.name}`;
-        if (seen.has(key)) return false;
-        seen.add(key);
-        return true;
-      });
+      .filter((r): r is EventRow & { __key: string } => r !== null);
   }, [rows]);
 
   const sortedRows = useMemo(() => {
