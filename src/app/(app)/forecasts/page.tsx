@@ -48,17 +48,22 @@ export default function ForecastsPage() {
     return null;
   };
 
-  const filteredRows = useMemo(
-    () =>
-      rows
-        .map((r) => {
-          const iso = normalizeDate(r.forecast_date);
-          return iso ? { ...r, forecast_date: iso } : null;
-        })
-        .filter((r): r is DeltaRow => r !== null)
-        .sort((a, b) => a.forecast_date.localeCompare(b.forecast_date)),
-    [rows],
-  );
+  const filteredRows = useMemo(() => {
+    const seen = new Set<string>();
+    return rows
+      .map((r) => {
+        const iso = normalizeDate(r.forecast_date);
+        return iso ? { ...r, forecast_date: iso } : null;
+      })
+      .filter((r): r is DeltaRow => r !== null)
+      .filter((r) => {
+        const key = `${r.org_id}-${r.forecast_date}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      })
+      .sort((a, b) => a.forecast_date.localeCompare(b.forecast_date));
+  }, [rows]);
 
   const currentWeekRows = useMemo(
     () =>

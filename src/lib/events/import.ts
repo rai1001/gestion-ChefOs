@@ -35,11 +35,30 @@ function parseCell(value: any) {
   return { name, event_type, attendees: pax };
 }
 
-function parseSheet(sheet: XLSX.WorkSheet): EventRow[] {
+function parseSheet(sheet: XLSX.WorkSheet, sheetName: string): EventRow[] {
   const json = XLSX.utils.sheet_to_json<Record<string, any>>(sheet, { defval: null, header: 1, raw: false });
   if (json.length === 0) return [];
   const header = json[0] as any[];
   const halls = header.slice(1).map((h) => String(h ?? "").trim()).filter(Boolean);
+  const monthHint = String(header[0] ?? "").trim().toUpperCase();
+  const monthMap: Record<string, number> = {
+    ENE: 0, ENERO: 0,
+    FEB: 1, FEBRERO: 1,
+    MAR: 2, MARZO: 2,
+    ABR: 3, ABRIL: 3,
+    MAY: 4, MAYO: 4,
+    JUN: 5, JUNIO: 5,
+    JUL: 6, JULIO: 6,
+    AGO: 7, AGOSTO: 7,
+    SEP: 8, SEPT: 8, SEPTIEMBRE: 8,
+    OCT: 9, OCTUBRE: 9,
+    NOV: 10, NOVIEMBRE: 10,
+    DIC: 11, DICIEMBRE: 11,
+  };
+  const monthIdx = monthMap[monthHint] ?? null;
+  const yearMatch = sheetName.match(/(20\d{2})/);
+  const sheetYear = yearMatch ? Number(yearMatch[1]) : new Date().getFullYear();
+
   const rows: EventRow[] = [];
   for (let r = 1; r < json.length; r++) {
     const row = json[r] as any[];
@@ -49,11 +68,9 @@ function parseSheet(sheet: XLSX.WorkSheet): EventRow[] {
     if (typeof dateVal === "string") {
       event_date = normalizeDate(dateVal);
     } else if (typeof dateVal === "number") {
-      // Excel serial or plain day number
-      if (dateVal < 60) {
-        // likely "1".."31" day number; anchor to current month
-        const today = new Date();
-        const dt = new Date(today.getFullYear(), today.getMonth(), Number(dateVal));
+      if (dateVal < 60 && monthIdx !== null) {
+        const day = Number(dateVal);
+        const dt = new Date(sheetYear, monthIdx, day);
         event_date = dt.toISOString().slice(0, 10);
       } else {
         event_date = XLSX.SSF.format("yyyy-mm-dd", dateVal);
@@ -81,7 +98,7 @@ export function parseEventsXlsx(buf: Buffer): EventRow[] {
   const rows: EventRow[] = [];
   for (const sheetName of wb.SheetNames) {
     const sheet = wb.Sheets[sheetName];
-    rows.push(...parseSheet(sheet));
+    rows.push(...parseSheet(sheet, sheetName));
   }
   return rows;
 }
