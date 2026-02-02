@@ -28,3 +28,8 @@ export function upsertProduct(p: Omit<Product, "id"> & { id?: string }) {
 export function seedProduct(p: Product) {
   productsStore.set(p.id, p);
 }
+
+export function findProductByName(org_id: string, name: string) {
+  const target = name.trim().toLowerCase();
+  return listProducts(org_id).find((p) => p.name.trim().toLowerCase() === target);
+}
