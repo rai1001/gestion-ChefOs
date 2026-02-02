@@ -309,16 +309,15 @@ export default function EventsPage() {
           <form className="space-y-3" aria-label="events-import-form" onSubmit={handleImport}>
             <div className="flex flex-col gap-2 text-sm text-slate-200">
               <span>Archivo Excel/CSV</span>
-              <input
-                ref={importInputRef}
-                aria-label="Archivo Eventos"
-                name="file"
-                type="file"
-                accept=".xlsx,.xls,.csv"
-                className="hidden"
-                onChange={(e) => setSelectedImportFile(e.target.files?.[0]?.name ?? "")}
-                required
-              />
+            <input
+              ref={importInputRef}
+              aria-label="Archivo Eventos"
+              name="file"
+              type="file"
+              accept=".xlsx,.xls,.csv"
+              className="hidden"
+              onChange={(e) => setSelectedImportFile(e.target.files?.[0]?.name ?? "")}
+            />
               <div className="flex gap-2 items-center">
                 <button
                   type="button"
@@ -496,17 +495,17 @@ export default function EventsPage() {
               >
                 <div className="flex items-center justify-between text-[11px] text-slate-300">
                   <span>{day.label}</span>
-                  {calendarRows.some((r) => r.event_date === day.iso) && <span className="h-2 w-2 rounded-full bg-emerald-400" />}
-                </div>
-                <div className="mt-1 flex flex-wrap gap-1">
-                  {(eventsByDay.get(day.iso) ?? []).slice(0, 3).map((ev) => (
-                    <span
-                      key={ev.hall}
-                      className="px-2 py-0.5 rounded-full bg-white/10 text-[10px] text-slate-200"
-                    >
-                      {ev.hall}
-                    </span>
-                  ))}
+            {calendarRows.some((r) => r.event_date === day.iso) && <span className="h-2 w-2 rounded-full bg-emerald-400" />}
+          </div>
+          <div className="mt-1 flex flex-wrap gap-1">
+            {(eventsByDay.get(day.iso) ?? []).slice(0, 3).map((ev, idx) => (
+              <span
+                key={`${ev.event_date}-${ev.hall}-${idx}`}
+                className="px-2 py-0.5 rounded-full bg-white/10 text-[10px] text-slate-200"
+              >
+                {ev.hall}
+              </span>
+            ))}
                   {(eventsByDay.get(day.iso)?.length ?? 0) > 3 && (
                     <span className="px-2 py-0.5 rounded-full bg-slate-800 text-[10px] text-slate-300">
                       +{(eventsByDay.get(day.iso)?.length ?? 0) - 3}
@@ -590,7 +589,7 @@ export default function EventsPage() {
               <tr><td className="py-2" colSpan={5}>Sin datos</td></tr>
             )}
             {sortedRows.map((row, idx) => (
-              <tr key={`${row.org_id}-${row.event_date}-${row.hall}-${idx}`} data-testid="event-row" className="hover:bg-white/5">
+              <tr key={`${row.org_id}-${row.event_date}-${row.hall}-${idx}-${row.name}`} data-testid="event-row" className="hover:bg-white/5">
                 <td className="py-2">{row.event_date}</td>
                 <td className="py-2">{row.hall}</td>
                 <td className="py-2">{row.name} {row.event_type ? `(${row.event_type})` : ""}</td>

@@ -204,7 +204,6 @@ export default function ForecastsPage() {
               accept=".xlsx,.xls,.csv"
               onChange={(e) => setSelectedFileName(e.target.files?.[0]?.name ?? "")}
               className="hidden"
-              required
             />
             <div className="flex gap-2 items-center">
               <button
