@@ -46,6 +46,7 @@ Auth: Supabase session vía `proxy` (App Router). Modo E2E/stub (`NEXT_PUBLIC_E2
 - `POST /api/recipes` – crea receta manual con payload similar.
 - `POST /api/recipes/import` – multipart `file` (xlsx/csv) o JSON base64; devuelve `id` y `summary { items, total_cost }`.
 - `POST /api/ocr?kind=receta` – OCR Mistral; si trae tabla de ingredientes guarda receta y devuelve `recipe_id`.
+- `GET/POST /api/products` – catálogo de productos `{ name, unit, unit_price }` en modo stub/E2E.
 
 ## Alerts & Cron
 - `GET /api/alerts` – lista alertas generadas.
