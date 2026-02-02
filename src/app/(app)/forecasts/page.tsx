@@ -125,7 +125,17 @@ export default function ForecastsPage() {
           </button>
         </div>
         <form className="space-y-3" aria-label="forecast-import-form" onSubmit={handleImport}>
-          <input aria-label="Archivo previsión" name="file" type="file" accept=".xlsx,.xls,.csv" className="text-sm" />
+          <label className="flex flex-col gap-1 text-sm text-slate-200">
+            Archivo previsión
+            <input
+              aria-label="Archivo previsión"
+              name="file"
+              type="file"
+              accept=".xlsx,.xls,.csv"
+              className="text-sm cursor-pointer file:cursor-pointer"
+              required
+            />
+          </label>
           <div className="flex gap-3">
             <button
               type="submit"

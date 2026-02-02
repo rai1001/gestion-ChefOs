@@ -232,7 +232,17 @@ export default function EventsPage() {
         <section className="bg-white/5 border border-white/10 rounded-xl p-6 space-y-4 lg:col-span-1">
           <h2 className="text-lg font-semibold">Importar eventos (Excel)</h2>
           <form className="space-y-3" aria-label="events-import-form" onSubmit={handleImport}>
-            <input aria-label="Archivo Eventos" name="file" type="file" accept=".xlsx,.xls" className="text-sm" />
+            <label className="flex flex-col gap-1 text-sm text-slate-200">
+              Archivo Excel
+              <input
+                aria-label="Archivo Eventos"
+                name="file"
+                type="file"
+                accept=".xlsx,.xls"
+                className="text-sm cursor-pointer file:cursor-pointer"
+                required
+              />
+            </label>
             <div className="flex gap-3">
               <button
                 type="submit"
