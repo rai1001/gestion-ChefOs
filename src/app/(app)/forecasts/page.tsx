@@ -22,6 +22,7 @@ export default function ForecastsPage() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const today = new Date();
   const startOfWeek = new Date(today);
+  startOfWeek.setHours(0, 0, 0, 0);
   startOfWeek.setDate(today.getDate() - today.getDay()); // domingo
   const endOfWeek = new Date(startOfWeek);
   endOfWeek.setDate(startOfWeek.getDate() + 6);
@@ -243,10 +244,15 @@ export default function ForecastsPage() {
       <section className="bg-white/5 border border-white/10 rounded-xl p-6 space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold">Semana en curso</h2>
-          <span className="text-xs text-slate-400">{rows.filter((r) => {
-            const d = new Date(r.forecast_date);
-            return d >= startOfWeek && d <= endOfWeek;
-          }).length} días</span>
+          <span className="text-xs text-slate-400">
+            {
+              rows.filter((r) => {
+                const d = new Date(r.forecast_date);
+                return d >= startOfWeek && d <= endOfWeek;
+              }).length
+            }{" "}
+            días
+          </span>
         </div>
         {rows.filter((r) => {
           const d = new Date(r.forecast_date);
