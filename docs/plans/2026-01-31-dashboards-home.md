@@ -42,6 +42,8 @@ Estado: ✅ completado (tests verdes `corepack pnpm test -- tests/lib/dashboards
 5. Manejar estados vacíos y errores de fetch (fallback a arrays vacíos).
 6. Mantener estilos oscuros existentes.
 
+Estado: ✅ hecho (grid 4 tarjetas + 4 listas con data-testids; estilos dark).
+
 ### Task 3: E2E dashboard
 
 **Files:**
@@ -50,6 +52,8 @@ Estado: ✅ completado (tests verdes `corepack pnpm test -- tests/lib/dashboards
 **Steps:**
 1. Actualizar test para verificar las 4 tarjetas y que las listas muestran al menos un item (stub E2E) o “Sin datos” si vacío.
 2. Ejecutar `pnpm e2e --project=chromium --grep dashboards` y asegurar verde.
+
+Estado: ✅ test `tests/e2e/dashboards.spec.ts` pasando (`corepack pnpm e2e -- --project=chromium --grep dashboards`).
 
 ### Task 4: Documentación
 
