@@ -122,7 +122,7 @@ export default function EventsPage() {
     e.preventDefault();
     setMessage("");
     setError("");
-    const input = e.currentTarget.file as unknown as HTMLInputElement;
+    const input = e.currentTarget.elements.namedItem("file") as HTMLInputElement | null;
     const file = input?.files?.[0];
     if (!file) {
       setError("Selecciona un archivo Excel (.xlsx)");
