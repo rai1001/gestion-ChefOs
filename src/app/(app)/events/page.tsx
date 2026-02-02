@@ -223,6 +223,11 @@ export default function EventsPage() {
   }, [sortedRows]);
 
   const handleSelectDate = (iso: string) => {
+    if (!isIsoDate(iso)) {
+      setSelectedDate("");
+      setSelectedEventHall("");
+      return;
+    }
     setSelectedDate(iso);
     const firstHall = eventsByDay.get(iso)?.[0]?.hall ?? "";
     setSelectedEventHall(firstHall);
@@ -287,7 +292,7 @@ export default function EventsPage() {
             <label className="text-sm text-slate-300 flex flex-col gap-1">
               Fecha evento
               <input
-                value={selectedDate}
+                value={isIsoDate(selectedDate) ? selectedDate : ""}
                 onChange={(e) => handleSelectDate(e.target.value)}
                 type="date"
                 className="rounded bg-slate-900 border border-white/10 px-3 py-2"

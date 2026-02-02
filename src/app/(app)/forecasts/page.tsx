@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 interface DeltaRow {
   org_id: string;
@@ -26,6 +26,14 @@ export default function ForecastsPage() {
   startOfWeek.setDate(today.getDate() - today.getDay()); // domingo
   const endOfWeek = new Date(startOfWeek);
   endOfWeek.setDate(startOfWeek.getDate() + 6);
+  const currentWeekRows = useMemo(
+    () =>
+      rows.filter((r) => {
+        const d = new Date(r.forecast_date);
+        return d >= startOfWeek && d <= endOfWeek;
+      }),
+    [rows, startOfWeek, endOfWeek],
+  );
 
   useEffect(() => {
     refresh();
