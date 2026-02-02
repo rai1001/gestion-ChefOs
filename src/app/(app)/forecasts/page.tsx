@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 interface DeltaRow {
   org_id: string;
@@ -18,6 +18,8 @@ export default function ForecastsPage() {
   const [realValue, setRealValue] = useState<number | "">("");
   const [message, setMessage] = useState<string>("");
   const [error, setError] = useState<string>("");
+  const [selectedFileName, setSelectedFileName] = useState<string>("");
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     refresh();
@@ -53,6 +55,8 @@ export default function ForecastsPage() {
         throw new Error(j.error || "Error al importar");
       }
       setMessage("Importación completada");
+      setSelectedFileName("");
+      if (fileInputRef.current) fileInputRef.current.value = "";
       await refresh();
     } catch (err: any) {
       setError(err?.message ?? "Error al importar");
@@ -125,18 +129,32 @@ export default function ForecastsPage() {
           </button>
         </div>
         <form className="space-y-3" aria-label="forecast-import-form" onSubmit={handleImport}>
-          <label className="flex flex-col gap-1 text-sm text-slate-200">
-            Archivo previsión
+          <div className="flex flex-col gap-2 text-sm text-slate-200">
+            <span>Archivo previsión</span>
             <input
+              ref={fileInputRef}
               aria-label="Archivo previsión"
               name="file"
               type="file"
               accept=".xlsx,.xls,.csv"
-              className="text-sm cursor-pointer file:cursor-pointer"
+              onChange={(e) => setSelectedFileName(e.target.files?.[0]?.name ?? "")}
+              className="hidden"
               required
             />
-          </label>
-          <div className="flex gap-3">
+            <div className="flex gap-2 items-center">
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="rounded-lg border border-white/15 px-3 py-2 text-sm hover:bg-white/10"
+              >
+                Elegir archivo
+              </button>
+              <span className="text-xs text-slate-400">
+                CSV/XLSX con columnas: fecha, ocupacion, desayunos.
+              </span>
+            </div>
+          </div>
+          <div className="flex gap-3 items-center">
             <button
               type="submit"
               disabled={importing}
@@ -144,6 +162,9 @@ export default function ForecastsPage() {
             >
               {importing ? "Importando..." : "Subir"}
             </button>
+            {selectedFileName && (
+              <span className="text-xs text-slate-300 truncate">{selectedFileName}</span>
+            )}
           </div>
           <p className="text-xs text-slate-400">Reemplaza por fecha (no suma). Columnas requeridas: fecha, ocupacion, desayunos.</p>
         </form>

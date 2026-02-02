@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 
 interface EventRow {
   org_id: string;
@@ -36,10 +36,12 @@ export default function EventsPage() {
   const [loadingSheet, setLoadingSheet] = useState(false);
   const [error, setError] = useState<string>("");
   const [message, setMessage] = useState<string>("");
+  const [selectedImportFile, setSelectedImportFile] = useState<string>("");
   const [monthCursor, setMonthCursor] = useState(() => {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1);
   });
+  const importInputRef = useRef<HTMLInputElement | null>(null);
 
   const sortedRows = useMemo(() => {
     return [...rows].sort((a, b) => {
@@ -133,6 +135,8 @@ export default function EventsPage() {
       await importFile(file);
       await refresh();
       setMessage("Eventos importados");
+      setSelectedImportFile("");
+      if (importInputRef.current) importInputRef.current.value = "";
     } catch (err: any) {
       setError(err?.message ?? "Error al importar");
     } finally {
@@ -232,18 +236,30 @@ export default function EventsPage() {
         <section className="bg-white/5 border border-white/10 rounded-xl p-6 space-y-4 lg:col-span-1">
           <h2 className="text-lg font-semibold">Importar eventos (Excel)</h2>
           <form className="space-y-3" aria-label="events-import-form" onSubmit={handleImport}>
-            <label className="flex flex-col gap-1 text-sm text-slate-200">
-              Archivo Excel
+            <div className="flex flex-col gap-2 text-sm text-slate-200">
+              <span>Archivo Excel/CSV</span>
               <input
+                ref={importInputRef}
                 aria-label="Archivo Eventos"
                 name="file"
                 type="file"
-                accept=".xlsx,.xls"
-                className="text-sm cursor-pointer file:cursor-pointer"
+                accept=".xlsx,.xls,.csv"
+                className="hidden"
+                onChange={(e) => setSelectedImportFile(e.target.files?.[0]?.name ?? "")}
                 required
               />
-            </label>
-            <div className="flex gap-3">
+              <div className="flex gap-2 items-center">
+                <button
+                  type="button"
+                  onClick={() => importInputRef.current?.click()}
+                  className="rounded-lg border border-white/15 px-3 py-2 text-sm hover:bg-white/10"
+                >
+                  Elegir archivo
+                </button>
+                {selectedImportFile && <span className="text-xs text-slate-400 truncate">{selectedImportFile}</span>}
+              </div>
+            </div>
+            <div className="flex gap-3 items-center">
               <button
                 type="submit"
                 disabled={importing}
