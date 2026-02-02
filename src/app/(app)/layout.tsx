@@ -15,6 +15,7 @@ const navItems = [
   { href: "/menus", label: "Menús/Escandallos", badge: "P2" },
   { href: "/calendar/month", label: "Calendario mes", badge: "P2" },
   { href: "/calendar/week", label: "Calendario semana", badge: "P2" },
+  { href: "/calendar/biweek", label: "Calendario quincena", badge: "P2" },
   { href: "/hotels", label: "Hoteles", badge: "P2" },
   { href: "/employees", label: "Empleados", badge: "P2" },
   { href: "/shifts", label: "Turnos", badge: "P2" },
