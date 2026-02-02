@@ -34,6 +34,18 @@ export const recetaOcrSchema = ocrBaseSchema.extend({
   title: z.string().optional(),
   ingredients: z.array(z.string()).default([]),
   steps: z.array(z.string()).default([]),
+  table: z
+    .array(
+      z.object({
+        producto: z.string(),
+        unidad: z.string().optional(),
+        cantidad_bruta: z.number().optional(),
+        cantidad_neta: z.number().optional(),
+        desperdicio_pct: z.number().optional(),
+        precio_unitario: z.number().optional(),
+      })
+    )
+    .default([]),
 });
 
 export const genericOcrSchema = ocrBaseSchema.extend({
@@ -49,4 +61,3 @@ export const ocrResponseSchema = z.discriminatedUnion("kind", [
 
 export type OcrResponse = z.infer<typeof ocrResponseSchema>;
 export type OcrKind = OcrResponse["kind"];
-
