@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 
 type TaskRow = {
   id: string;
@@ -14,10 +15,12 @@ type TaskRow = {
 
 const today = new Date().toISOString().slice(0, 10);
 
-export default function MobileTasksPage({ searchParams }: { searchParams?: Record<string, string> }) {
+export default function MobileTasksPage() {
   const [tasks, setTasks] = useState<TaskRow[]>([]);
   const [loading, setLoading] = useState(false);
-  const shift = (searchParams?.shift as "morning" | "evening") ?? "morning";
+  const params = useSearchParams();
+  const shiftParam = params.get("shift");
+  const shift = (shiftParam as "morning" | "evening" | null) ?? "morning";
 
   const shiftLabel = useMemo(() => (shift === "morning" ? "Turno mañana (06-14)" : "Turno tarde (16-24)"), [shift]);
 
