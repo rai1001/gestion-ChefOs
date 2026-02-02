@@ -21,6 +21,31 @@ const hallIndex = (hall: string) => {
   return idx === -1 ? HALL_ORDER.length : idx;
 };
 
+const normalizeDate = (input: string) => {
+  if (!input) return null;
+  const trimmed = input.trim();
+  // ISO already
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return trimmed;
+  // dd/mm/yy or dd/mm/yyyy or dd-mm-yy
+  const m = trimmed.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2,4})$/);
+  if (m) {
+    const [, d, mth, y] = m;
+    const year = y.length === 2 ? Number(`20${y}`) : Number(y);
+    const dt = new Date(year, Number(mth) - 1, Number(d));
+    return Number.isNaN(dt.getTime()) ? null : dt.toISOString().slice(0, 10);
+  }
+  // simple day number => current month/year
+  const asNum = Number(trimmed);
+  if (!Number.isNaN(asNum) && asNum > 0 && asNum <= 31) {
+    const today = new Date();
+    const dt = new Date(today.getFullYear(), today.getMonth(), asNum);
+    return dt.toISOString().slice(0, 10);
+  }
+  const native = new Date(trimmed);
+  if (!Number.isNaN(native.getTime())) return native.toISOString().slice(0, 10);
+  return null;
+};
+
 export default function EventsPage() {
   const [rows, setRows] = useState<EventRow[]>([]);
   const [selectedDate, setSelectedDate] = useState<string>("");
@@ -43,8 +68,14 @@ export default function EventsPage() {
   });
   const importInputRef = useRef<HTMLInputElement | null>(null);
 
-  const isIsoDate = (d: string) => /^\d{4}-\d{2}-\d{2}$/.test(d);
-  const calendarRows = useMemo(() => rows.filter((r) => isIsoDate(r.event_date)), [rows]);
+  const calendarRows = useMemo(() => {
+    return rows
+      .map((r) => {
+        const iso = normalizeDate(r.event_date);
+        return iso ? { ...r, event_date: iso } : null;
+      })
+      .filter((r): r is EventRow => r !== null);
+  }, [rows]);
 
   const sortedRows = useMemo(() => {
     return [...calendarRows].sort((a, b) => {
@@ -93,7 +124,13 @@ export default function EventsPage() {
     const json = await res.json();
     const data = (json.data as EventRow[]) ?? [];
     setRows(data);
-    const valid = data.filter((d) => isIsoDate(d.event_date)).sort((a, b) => a.event_date.localeCompare(b.event_date));
+    const valid = data
+      .map((d) => {
+        const iso = normalizeDate(d.event_date);
+        return iso ? { ...d, event_date: iso } : null;
+      })
+      .filter((d): d is EventRow => d !== null)
+      .sort((a, b) => a.event_date.localeCompare(b.event_date));
     if (valid.length > 0) {
       const byDay = valid.reduce<Record<string, EventRow[]>>((acc, r) => {
         const list = acc[r.event_date] ?? [];
@@ -227,13 +264,14 @@ export default function EventsPage() {
   }, [sortedRows]);
 
   const handleSelectDate = (iso: string) => {
-    if (!isIsoDate(iso)) {
+    const norm = normalizeDate(iso);
+    if (!norm) {
       setSelectedDate("");
       setSelectedEventHall("");
       return;
     }
-    setSelectedDate(iso);
-    const firstHall = eventsByDay.get(iso)?.[0]?.hall ?? "";
+    setSelectedDate(norm);
+    const firstHall = eventsByDay.get(norm)?.[0]?.hall ?? "";
     setSelectedEventHall(firstHall);
   };
 
@@ -296,7 +334,7 @@ export default function EventsPage() {
             <label className="text-sm text-slate-300 flex flex-col gap-1">
               Fecha evento
               <input
-                value={isIsoDate(selectedDate) ? selectedDate : ""}
+                value={selectedDate || ""}
                 onChange={(e) => handleSelectDate(e.target.value)}
                 type="date"
                 className="rounded bg-slate-900 border border-white/10 px-3 py-2"
