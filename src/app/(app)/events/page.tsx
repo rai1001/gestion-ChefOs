@@ -93,8 +93,8 @@ export default function EventsPage() {
     const json = await res.json();
     const data = (json.data as EventRow[]) ?? [];
     setRows(data);
-    const valid = data.filter((d) => isIsoDate(d.event_date));
-    if (!selectedDate && valid.length > 0) {
+    const valid = data.filter((d) => isIsoDate(d.event_date)).sort((a, b) => a.event_date.localeCompare(b.event_date));
+    if (valid.length > 0) {
       const byDay = valid.reduce<Record<string, EventRow[]>>((acc, r) => {
         const list = acc[r.event_date] ?? [];
         list.push(r);
@@ -102,12 +102,16 @@ export default function EventsPage() {
         return acc;
       }, {});
       const todayIso = new Date().toISOString().slice(0, 10);
-      const pick = byDay[todayIso]?.length ? todayIso : valid[0].event_date;
+      const candidate = byDay[todayIso]?.length ? todayIso : valid[0].event_date;
+      const pick = byDay[selectedDate]?.length ? selectedDate : candidate;
       setSelectedDate(pick);
       const firstHall = (byDay[pick] ?? [])[0]?.hall ?? "";
       setSelectedEventHall(firstHall);
-      const firstDate = new Date(pick);
+      const firstDate = new Date(valid[0].event_date);
       setMonthCursor(new Date(firstDate.getFullYear(), firstDate.getMonth(), 1));
+    } else {
+      setSelectedDate("");
+      setSelectedEventHall("");
     }
     setMessage("");
     } catch {
