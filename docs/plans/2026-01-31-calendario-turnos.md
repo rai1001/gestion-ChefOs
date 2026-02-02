@@ -16,9 +16,13 @@
 - Tests: `tests/lib/calendar/utils.test.ts`
 
 **Steps:**
-1. Funciones para generar días de mes (primer día, padding) y agrupar eventos/turnos por fecha.
-2. Helper `labelShift(status, code)` para color/texto.
-3. Vitest para utils (stub data).
+1. Escribir tests Vitest (fallando) para:
+   - `buildMonthGrid(year, month)` devuelve 42 celdas (7x6) empezando en lunes, cada celda con `date`, `isCurrentMonth`.
+   - `groupByDate(events|shifts)` agrupa por `yyyy-mm-dd`.
+   - `labelShift(status, code)` devuelve `{label,color}` para mañana/tarde/vacaciones/baja.
+   Run: `pnpm test --filter "calendar utils"` → debe fallar.
+2. Implementar helpers en `src/lib/calendar/utils.ts` sin librerías externas: funciones de fecha puras que reciban `Date | string`.
+3. Re-ejecutar `pnpm test --filter "calendar utils"` y asegurar verde.
 
 ### Task 2: API filtors para calendario
 **Files:**
@@ -26,9 +30,10 @@
 - Modify: `src/app/api/shifts/route.ts` (añadir filtro hotel_id)
 
 **Steps:**
-1. Aceptar query `from`/`to` en GET events para limitar fechas.
-2. Aceptar `hotel_id` en GET shifts y mantener stub.
-3. Ajustar tests existentes si aplica.
+1. Extender GET `/api/events` para aceptar `from`/`to` (ISO dates) y filtrar; en modo stub limitar a ese rango.
+2. Extender GET `/api/shifts` para `hotel_id`, `start`, `end`; mantener stub con seeds filtrados.
+3. Añadir/ajustar pruebas unitarias si existen; en caso contrario, cubrir con Vitest ligero o rely en e2e.
+4. Run: `pnpm test --filter "api"`, revisar que no se rompan rutas.
 
 ### Task 3: UI Calendario mensual
 **Files:**
@@ -37,10 +42,10 @@
 - Tests: `tests/e2e/calendar-month.spec.ts`
 
 **Steps:**
-1. Grid 7x6, encabezados lun-dom; cada celda muestra fecha, eventos (nombre/pax) y turnos (mañana/tarde) truncados; contador “+N” para overflow.
-2. Toolbar: selector de mes (prev/next), toggle salón/hotel (select), leyenda de colores (evento, turno mañana, turno tarde, vacaciones).
-3. Datos: fetch `/api/events?from=...&to=...` y `/api/shifts?start=...&end=...`.
-4. E2E: verifica que se renderiza el mes y marca un evento stub.
+1. Crear Client Component con toolbar (prev/next mes, select hotel/salón, leyenda) y estado local `currentMonth`, `selectedHotel`.
+2. Usar helpers para construir grid 7x6; cada celda muestra fecha, chips de eventos/turnos truncados y contador “+N” cuando >3 items; `data-testid="calendar-month-grid"`.
+3. Fetch paralelo a `/api/events?from=...&to=...` y `/api/shifts?start=...&end=...`; fallback a arrays vacíos; spinners y estados vacíos.
+4. E2E `tests/e2e/calendar-month.spec.ts`: visitar /calendar/month con `NEXT_PUBLIC_E2E=1`, verificar un evento stub visible y que prev/next cambian el mes; Run: `pnpm e2e --project=chromium --grep "calendar-month"`.
 
 ### Task 4: UI Calendario semanal (agenda empleados)
 **Files:**
@@ -48,10 +53,10 @@
 - Tests: `tests/e2e/calendar-week.spec.ts`
 
 **Steps:**
-1. Layout filas=empleados (de `/api/employees`), columnas=días (7); cada celda muestra turno mañana/tarde o “V” vacaciones; click para crear turno rápido (stub, POST /api/shifts).
-2. Filtros: hotel selector y semana (date input start).
-3. Leyenda de colores y contador de faltantes.
-4. E2E: crea turno vía UI y lo ve en la cuadrícula (stub).
+1. Crear Client Component con filtros: hotel selector, input semana (start date), leyenda; cargar empleados de `/api/employees`.
+2. Construir matriz empleados x 7 días; cada celda muestra mañana/tarde o “V”; botón inline “+” abre form ligero (modal o inline) para crear turno (POST /api/shifts) y refrescar.
+3. Añadir contadores de faltantes por día y data-testid `calendar-week-grid`.
+4. E2E `tests/e2e/calendar-week.spec.ts`: crea turno stub vía UI y verifica render; Run: `pnpm e2e --project=chromium --grep "calendar-week"`.
 
 ### Task 5: Navegación
 **Files:**
@@ -59,8 +64,9 @@
 - Tests: `tests/e2e/smoke.spec.ts` (añadir rutas)
 
 **Steps:**
-1. Añadir links “Calendario mes” y “Calendario semana” en nav.
-2. Smoke: visita /calendar/month y /calendar/week.
+1. Verificar que el sidenav y mobile nav incluyen “Calendario mes” y “Calendario semana”; añadir si falta, sin duplicados.
+2. Actualizar smoke test para visitar /calendar/month y /calendar/week y ver headers básicos.
+3. Run: `pnpm e2e --project=chromium --grep "smoke"` (o test específico actualizado).
 
 ### Task 6: Documentación
 **Files:**
@@ -68,13 +74,25 @@
 - Update: `docs/plans/2026-01-31-calendario-turnos.md` (mark done)
 
 **Steps:**
-1. Documentar filtros y payloads.
+1. Documentar contratos de `/api/events` y `/api/shifts` con nuevos filtros y ejemplos.
+2. Anotar en este plan qué tareas quedaron completadas.
 
 ### Task 7: Tests finales y commit
 **Steps:**
-1. `pnpm test` (vitest).
-2. `pnpm e2e --project=chromium --grep "calendar"` + smoke si aplica.
-3. Commit `feat(calendar): month+week views`.
+1. `pnpm test` (vitest general).
+2. `pnpm e2e --project=chromium --grep "calendar"` y smoke.
+3. `git status`, `git add ...`, `git commit -m "feat(calendar): month+week views"`.
+
+---
+
+Estado al 2026-01-31:
+- [x] Task 1 (utils + tests)
+- [x] Task 2 (filtros events/shifts)
+- [x] Task 3 (UI month + e2e)
+- [x] Task 4 (UI week + e2e)
+- [x] Task 5 (nav links)
+- [x] Task 6 (api-contracts actualizado)
+- [x] Task 7 (tests finales) – `pnpm test`, `pnpm e2e --project=chromium --grep "calendar"` OK; commit pendiente
 
 ---
 

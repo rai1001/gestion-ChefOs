@@ -87,7 +87,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
       </aside>
 
       <div className="flex min-h-screen flex-1 flex-col">
-        <header className="sticky top-0 z-10 flex flex-col gap-3 border-b border-white/10 bg-slate-900/70 px-4 py-3 backdrop-blur md:hidden">
+        <header className="relative z-10 flex flex-col gap-3 border-b border-white/10 bg-slate-900/70 px-4 py-3 backdrop-blur md:hidden">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-[11px] uppercase tracking-[0.2em] text-emerald-300">Cocina Hotels</p>

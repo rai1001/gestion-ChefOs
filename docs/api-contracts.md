@@ -13,7 +13,7 @@ Auth: Supabase session vía `proxy` (App Router). Modo E2E/stub (`NEXT_PUBLIC_E2
 - `POST /api/events/:id/attach-menu` – `{ menu_name, hall? }`; si `hall` es nulo aplica a todos los salones de la fecha.
 - `GET /api/events/:id/sheets?hall=...&aggregate=false` – hojas de producción/compras agregadas o por salón.
 - `GET /api/dashboards/events/upcoming?days=30` – eventos próximos para dashboard.
-- `GET /api/events` – lista en-memory en E2E (para UI).
+- `GET /api/events?from=YYYY-MM-DD&to=YYYY-MM-DD` – filtra por rango de fechas; en E2E/stub devuelve store in-memory filtrado.
 
 ## Producción / Tareas (US3)
 - `GET /api/tasks` | `POST /api/tasks` – lista/crea tareas.
@@ -39,7 +39,7 @@ Auth: Supabase session vía `proxy` (App Router). Modo E2E/stub (`NEXT_PUBLIC_E2
 ## Hoteles / Empleados / Turnos (MVP staff)
 - `GET/POST /api/hotels` – lista/crea hoteles (org_id default org-dev). E2E/stub in-memory cuando no hay Supabase.
 - `GET/POST /api/employees` – lista/crea empleados `{ name, role, email?, hotel_id? }`.
-- `GET/POST /api/shifts` – lista/crea turnos `{ shift_date, shift_code: morning|evening, status }` con filtro `start/end`.
+- `GET/POST /api/shifts` – lista/crea turnos `{ shift_date, shift_code: morning|evening, status }` con filtros `start`, `end`, `hotel_id`; E2E/stub filtra sobre store local si no hay Supabase.
 
 ## Alerts & Cron
 - `GET /api/alerts` – lista alertas generadas.
