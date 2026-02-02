@@ -1,5 +1,7 @@
 import { supabaseClient } from "@/lib/supabase/client";
 import { listLots, listTasks } from "@/lib/tasks/store";
+import { listUpcomingEvents as listEventsStore } from "@/lib/events/store";
+import { listEntries as listForecastEntries, listDelta as listForecastDelta } from "@/lib/forecast/store";
 
 export type AlertSummary = { org_id: string; alert_count: number };
 export type ExpirySummary = { lot_id: string; product_id?: string; expires_at?: string };
@@ -9,9 +11,11 @@ export type UpcomingTask = { id: string; title: string; due_date: string; shift:
 export type AlertItem = { title: string; date?: string; severity: "warn" | "danger" };
 
 const isE2E = () => process.env.NEXT_PUBLIC_E2E === "1" || process.env.E2E === "1";
+const hasSupabase = () => Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+const useStub = () => isE2E() || !hasSupabase();
 
 export async function getAlertSummary(org_id: string): Promise<AlertSummary[]> {
-  if (isE2E()) {
+  if (useStub()) {
     const lots = listLots();
     const today = new Date();
     const soon = new Date(today.getTime() + 2 * 86400000).toISOString().slice(0, 10);
@@ -43,7 +47,7 @@ export async function getAlertSummary(org_id: string): Promise<AlertSummary[]> {
 }
 
 export async function getExpirySoon(org_id: string, daysAhead = 2): Promise<ExpirySummary[]> {
-  if (isE2E()) {
+  if (useStub()) {
     const lots = listLots();
     const soon = new Date(Date.now() + daysAhead * 86400000);
     return lots.filter((l) => l.expires_at && new Date(l.expires_at) <= soon).map((l) => ({ lot_id: l.id, product_id: l.product_id, expires_at: l.expires_at }));
@@ -62,8 +66,8 @@ export async function getExpirySoon(org_id: string, daysAhead = 2): Promise<Expi
 }
 
 export async function getForecastDelta(org_id: string): Promise<ForecastDelta[]> {
-  if (isE2E()) {
-    return [{ forecast_date: "2026-02-01", delta: -10 }];
+  if (useStub()) {
+    return listForecastDelta().filter((r) => r.org_id === org_id);
   }
   const supabase = supabaseClient();
   const { data, error } = await supabase.from("forecast_delta").select("forecast_date, delta").eq("org_id", org_id);
@@ -72,11 +76,10 @@ export async function getForecastDelta(org_id: string): Promise<ForecastDelta[]>
 }
 
 export async function getUpcomingEvents(org_id: string, daysAhead = 30): Promise<UpcomingEvent[]> {
-  if (isE2E()) {
-    return [
-      { event_date: "2026-02-10", hall: "ROSALIA", name: "Cena Gala", event_type: "Banquete", attendees: 120 },
-      { event_date: "2026-02-11", hall: "PONDAL", name: "Conferencia", event_type: "Corporate", attendees: 60 },
-    ];
+  if (useStub()) {
+    return listEventsStore(daysAhead)
+      .filter((ev) => ev.org_id === org_id)
+      .map((ev) => ({ event_date: ev.event_date, hall: ev.hall, name: ev.name, event_type: ev.event_type, attendees: ev.attendees }));
   }
   const supabase = supabaseClient();
   const limitDate = new Date(Date.now() + daysAhead * 86400000).toISOString().slice(0, 10);
@@ -90,7 +93,7 @@ export async function getUpcomingEvents(org_id: string, daysAhead = 30): Promise
 }
 
 export async function getUpcomingTasks(org_id: string, daysAhead = 7): Promise<UpcomingTask[]> {
-  if (isE2E()) {
+  if (useStub()) {
     const tasks = listTasks({ to: new Date(Date.now() + daysAhead * 86400000).toISOString().slice(0, 10) });
     return tasks.map((t) => ({ id: t.id, title: t.title, due_date: t.due_date, shift: t.shift, status: t.status, hall: t.hall }));
   }
@@ -108,7 +111,7 @@ export async function getUpcomingTasks(org_id: string, daysAhead = 7): Promise<U
 }
 
 export async function getAlerts(org_id: string): Promise<AlertItem[]> {
-  if (isE2E()) {
+  if (useStub()) {
     return [
       { title: "Pedido retrasado PROV-21", date: "2026-02-10", severity: "warn" },
       { title: "Recepción incompleta ALB-884", date: "2026-02-09", severity: "danger" },
@@ -121,12 +124,17 @@ export async function getAlerts(org_id: string): Promise<AlertItem[]> {
 }
 
 export async function getBreakfastForecast(org_id: string, daysAhead = 7): Promise<{ date: string; breakfasts: number }[]> {
-  if (isE2E()) {
+  if (useStub()) {
     const today = new Date();
-    return Array.from({ length: daysAhead }).map((_, i) => {
-      const d = new Date(today.getTime() + i * 86400000).toISOString().slice(0, 10);
-      return { date: d, breakfasts: 120 + i * 3 };
-    });
+    const limit = new Date(today.getTime() + daysAhead * 86400000);
+    return listForecastEntries()
+      .filter((r) => r.org_id === org_id)
+      .filter((r) => {
+        const d = new Date(r.forecast_date);
+        return d >= today && d <= limit;
+      })
+      .sort((a, b) => a.forecast_date.localeCompare(b.forecast_date))
+      .map((r) => ({ date: r.forecast_date, breakfasts: r.breakfasts }));
   }
   const supabase = supabaseClient();
   const limitDate = new Date(Date.now() + daysAhead * 86400000).toISOString().slice(0, 10);

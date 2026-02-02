@@ -45,7 +45,8 @@ function parseSheet(sheet: XLSX.WorkSheet): EventRow[] {
     const row = json[r] as any[];
     const dateVal = row[0];
     if (!dateVal) continue;
-    const event_date = typeof dateVal === "string" ? dateVal : XLSX.SSF.format("yyyy-mm-dd", dateVal);
+    const event_date =
+      typeof dateVal === "string" ? normalizeDate(dateVal) : XLSX.SSF.format("yyyy-mm-dd", dateVal);
     halls.forEach((hall, idx) => {
       const cell = row[idx + 1];
       const parsed = parseCell(cell);
@@ -70,6 +71,25 @@ export function parseEventsXlsx(buf: Buffer): EventRow[] {
     rows.push(...parseSheet(sheet));
   }
   return rows;
+}
+
+function normalizeDate(input: string): string {
+  const trimmed = input.trim();
+  // Try native parse first
+  const native = new Date(trimmed);
+  if (!Number.isNaN(native.getTime())) {
+    return native.toISOString().slice(0, 10);
+  }
+  // Try dd/mm/yy or dd/mm/yyyy
+  const m = trimmed.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2,4})$/);
+  if (m) {
+    const [, d, mth, y] = m;
+    const year = y.length === 2 ? Number(`20${y}`) : Number(y);
+    const iso = new Date(year, Number(mth) - 1, Number(d));
+    if (!Number.isNaN(iso.getTime())) return iso.toISOString().slice(0, 10);
+  }
+  // Fallback: return as-is to avoid dropping data
+  return trimmed;
 }
 
 export async function upsertEvents(rows: EventRow[], orgId: string) {
