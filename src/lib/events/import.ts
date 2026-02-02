@@ -45,8 +45,21 @@ function parseSheet(sheet: XLSX.WorkSheet): EventRow[] {
     const row = json[r] as any[];
     const dateVal = row[0];
     if (!dateVal) continue;
-    const event_date =
-      typeof dateVal === "string" ? normalizeDate(dateVal) : XLSX.SSF.format("yyyy-mm-dd", dateVal);
+    let event_date: string | null = null;
+    if (typeof dateVal === "string") {
+      event_date = normalizeDate(dateVal);
+    } else if (typeof dateVal === "number") {
+      // Excel serial or plain day number
+      if (dateVal < 60) {
+        // likely "1".."31" day number; anchor to current month
+        const today = new Date();
+        const dt = new Date(today.getFullYear(), today.getMonth(), Number(dateVal));
+        event_date = dt.toISOString().slice(0, 10);
+      } else {
+        event_date = XLSX.SSF.format("yyyy-mm-dd", dateVal);
+      }
+    }
+    if (!event_date || !/^\d{4}-\d{2}-\d{2}$/.test(event_date)) continue;
     halls.forEach((hall, idx) => {
       const cell = row[idx + 1];
       const parsed = parseCell(cell);

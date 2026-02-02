@@ -35,6 +35,16 @@ export default function ForecastsPage() {
     [rows, startOfWeek, endOfWeek],
   );
 
+  const next7Days = useMemo(() => {
+    const today = new Date();
+    return Array.from({ length: 7 }).map((_, i) => {
+      const d = new Date(today.getTime() + i * 86400000);
+      const iso = d.toISOString().slice(0, 10);
+      const match = rows.find((r) => r.forecast_date === iso);
+      return { date: iso, breakfasts: match?.breakfasts ?? 0, actual: match?.actual_breakfasts ?? 0, delta: match?.delta ?? - (match?.breakfasts ?? 0) };
+    });
+  }, [rows]);
+
   useEffect(() => {
     refresh();
   }, []);
@@ -217,6 +227,30 @@ export default function ForecastsPage() {
             {savingReal ? "Guardando..." : "Guardar real"}
           </button>
         </form>
+      </section>
+
+      <section className="bg-white/5 border border-white/10 rounded-xl p-6 space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold">Próximos 7 días</h2>
+          <span className="text-xs text-slate-400">Previsto / Real</span>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {next7Days.map((d) => (
+            <div key={d.date} className="rounded-lg border border-white/10 bg-white/5 p-4 space-y-2">
+              <div className="flex items-center justify-between text-sm text-slate-300">
+                <span>{d.date}</span>
+                <span className="text-xs text-slate-500">{new Date(d.date).toLocaleDateString("es-ES", { weekday: "short" })}</span>
+              </div>
+              <div className="text-2xl font-semibold text-white">{d.breakfasts}</div>
+              <div className="flex items-center justify-between text-xs text-slate-400">
+                <span>Real: {d.actual}</span>
+                <span className={d.delta === 0 ? "text-slate-300" : d.delta > 0 ? "text-emerald-300" : "text-rose-300"}>
+                  Δ {d.delta}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
       </section>
 
       <section className="bg-white/5 border border-white/10 rounded-xl p-6 space-y-3">
