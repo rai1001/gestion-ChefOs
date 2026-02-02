@@ -20,6 +20,11 @@ export default function ForecastsPage() {
   const [error, setError] = useState<string>("");
   const [selectedFileName, setSelectedFileName] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const today = new Date();
+  const startOfWeek = new Date(today);
+  startOfWeek.setDate(today.getDate() - today.getDay()); // domingo
+  const endOfWeek = new Date(startOfWeek);
+  endOfWeek.setDate(startOfWeek.getDate() + 6);
 
   useEffect(() => {
     refresh();
@@ -29,7 +34,9 @@ export default function ForecastsPage() {
     try {
       const res = await fetch("/api/forecasts/delta");
       const json = await res.json();
-      setRows(json.data ?? []);
+      const data = (json.data as DeltaRow[]) ?? [];
+      data.sort((a, b) => a.forecast_date.localeCompare(b.forecast_date));
+      setRows(data);
     } catch {
       setRows([]);
     }
@@ -201,6 +208,80 @@ export default function ForecastsPage() {
             {savingReal ? "Guardando..." : "Guardar real"}
           </button>
         </form>
+      </section>
+
+      <section className="bg-white/5 border border-white/10 rounded-xl p-6 space-y-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold">Semana en curso</h2>
+          <span className="text-xs text-slate-400">{currentWeekRows.length} días</span>
+        </div>
+        {currentWeekRows.length === 0 && <p className="text-sm text-slate-400">No hay datos de esta semana.</p>}
+        {currentWeekRows.length > 0 && (
+          <table className="w-full text-sm" aria-label="forecast-current-week">
+            <thead className="text-slate-300">
+              <tr>
+                <th className="text-left py-2">Fecha</th>
+                <th className="text-right py-2">Previsto</th>
+                <th className="text-right py-2">Real</th>
+                <th className="text-right py-2">Delta</th>
+              </tr>
+            </thead>
+            <tbody>
+              {currentWeekRows.map((row) => (
+                <tr key={row.forecast_date}>
+                  <td className="py-2">{row.forecast_date}</td>
+                  <td className="py-2 text-right">{row.breakfasts}</td>
+                  <td className="py-2 text-right">{row.actual_breakfasts}</td>
+                  <td className="py-2 text-right">{row.delta}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </section>
+
+      <section className="bg-white/5 border border-white/10 rounded-xl p-6 space-y-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold">Semana en curso</h2>
+          <span className="text-xs text-slate-400">{rows.filter((r) => {
+            const d = new Date(r.forecast_date);
+            return d >= startOfWeek && d <= endOfWeek;
+          }).length} días</span>
+        </div>
+        {rows.filter((r) => {
+          const d = new Date(r.forecast_date);
+          return d >= startOfWeek && d <= endOfWeek;
+        }).length === 0 && <p className="text-sm text-slate-400">No hay datos de esta semana.</p>}
+        {rows.filter((r) => {
+          const d = new Date(r.forecast_date);
+          return d >= startOfWeek && d <= endOfWeek;
+        }).length > 0 && (
+          <table className="w-full text-sm" aria-label="forecast-current-week">
+            <thead className="text-slate-300">
+              <tr>
+                <th className="text-left py-2">Fecha</th>
+                <th className="text-right py-2">Previsto</th>
+                <th className="text-right py-2">Real</th>
+                <th className="text-right py-2">Delta</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows
+                .filter((r) => {
+                  const d = new Date(r.forecast_date);
+                  return d >= startOfWeek && d <= endOfWeek;
+                })
+                .map((row) => (
+                  <tr key={row.forecast_date}>
+                    <td className="py-2">{row.forecast_date}</td>
+                    <td className="py-2 text-right">{row.breakfasts}</td>
+                    <td className="py-2 text-right">{row.actual_breakfasts}</td>
+                    <td className="py-2 text-right">{row.delta}</td>
+                  </tr>
+                ))}
+            </tbody>
+          </table>
+        )}
       </section>
 
       <section className="bg-white/5 border border-white/10 rounded-xl p-6 space-y-3">

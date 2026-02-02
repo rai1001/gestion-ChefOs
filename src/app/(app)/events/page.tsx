@@ -102,6 +102,9 @@ export default function EventsPage() {
         setSelectedDate(pick);
         const firstHall = (byDay[pick] ?? [])[0]?.hall ?? "";
         setSelectedEventHall(firstHall);
+        // sitúa el calendario en el mes del primer evento
+        const firstDate = new Date(pick);
+        setMonthCursor(new Date(firstDate.getFullYear(), firstDate.getMonth(), 1));
       }
       setMessage("");
     } catch {
