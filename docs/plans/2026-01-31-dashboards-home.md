@@ -23,6 +23,8 @@
 4. Actualizar pruebas de queries en Vitest para stub mode: verificar que retorna arrays con longitud >0 usando store seeds.
 5. Run `pnpm test` (o target queries file) y fijar fallos.
 
+Estado: ✅ completado (tests verdes `corepack pnpm test -- tests/lib/dashboards/queries.test.ts`).
+
 ### Task 2: UI /dashboards
 
 **Files:**
