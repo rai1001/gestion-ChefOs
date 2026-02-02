@@ -3,18 +3,27 @@ import { upsertForecastsFromXlsx, upsertForecasts, parseForecastXlsx, hashBuffer
 import { upsertEntries } from "@/lib/forecast/store";
 
 const isE2E = process.env.NEXT_PUBLIC_E2E === "1" || process.env.E2E === "1";
+const hasSupabase = Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 
 export async function POST(req: NextRequest) {
   try {
     const contentType = req.headers.get("content-type") || "";
     const orgId = req.headers.get("x-org-id") || "org-dev";
 
-    if (isE2E) {
-      // accept JSON rows
-      const body = await req.json();
-      const rows = Array.isArray(body.rows) ? body.rows : body;
+    if (isE2E || !hasSupabase) {
+      const body = contentType.includes("application/json") ? await req.json() : await req.formData();
+      let rows: any[] = [];
+      if (body instanceof FormData) {
+        const file = body.get("file");
+        if (!file || typeof file === "string") return NextResponse.json({ error: "file required" }, { status: 400 });
+        const buffer = Buffer.from(await (file as Blob).arrayBuffer());
+        const isCsv = (file as File).name?.toLowerCase().endsWith(".csv");
+        rows = parseForecastXlsx(buffer, isCsv);
+      } else {
+        rows = Array.isArray(body.rows) ? body.rows : body;
+      }
       upsertEntries(rows.map((r: any) => ({ ...r, org_id: orgId })));
-      return NextResponse.json({ status: "ok", mode: "e2e", count: rows.length });
+      return NextResponse.json({ status: "ok", mode: isE2E ? "e2e" : "stub", count: rows.length });
     }
 
     if (contentType.includes("application/json")) {
