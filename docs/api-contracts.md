@@ -41,6 +41,12 @@ Auth: Supabase session vía `proxy` (App Router). Modo E2E/stub (`NEXT_PUBLIC_E2
 - `GET/POST /api/employees` – lista/crea empleados `{ name, role, email?, hotel_id? }`.
 - `GET/POST /api/shifts` – lista/crea turnos `{ shift_date, shift_code: morning|evening, status }` con filtros `start`, `end`, `hotel_id`; E2E/stub filtra sobre store local si no hay Supabase.
 
+## Recetas / Escandallos
+- `GET /api/recipes` – lista recetas `{ id, name, date?, servings, items[], total_cost, cost_per_serving }`.
+- `POST /api/recipes` – crea receta manual con payload similar.
+- `POST /api/recipes/import` – multipart `file` (xlsx/csv) o JSON base64; devuelve `id` y `summary { items, total_cost }`.
+- `POST /api/ocr?kind=receta` – OCR Mistral; si trae tabla de ingredientes guarda receta y devuelve `recipe_id`.
+
 ## Alerts & Cron
 - `GET /api/alerts` – lista alertas generadas.
 - `GET /api/cron/refresh-dashboards` – stub; en prod debe refrescar materialized views + alert sweep.
