@@ -21,18 +21,42 @@ export function parseForecastXlsx(buf: Buffer, isCsv = false): ForecastRow[] {
   const sheet = workbook.Sheets[sheetName];
   const json = XLSX.utils.sheet_to_json<Record<string, any>>(sheet, { defval: null });
 
-  return json.map((row) => {
-    const dateVal = row.fecha ?? row.date ?? row.Fecha ?? row.Date;
-    const guestsVal = row.ocupacion ?? row.guests ?? row.Ocupacion ?? row.Guests ?? row.Occupancy;
-    const breakfastsVal = row.desayunos ?? row.breakfasts ?? row.Desayunos ?? row.Breakfasts;
+  const normalizeDate = (val: any): string | null => {
+    if (val === null || val === undefined || val === "") return null;
+    if (typeof val === "number") return XLSX.SSF.format("yyyy-mm-dd", val);
+    const str = String(val).trim();
+    const m = str.match(/(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2,4})/);
+    if (m) {
+      const [, d, mo, y] = m;
+      const year = y.length === 2 ? Number(`20${y}`) : Number(y);
+      const dt = new Date(year, Number(mo) - 1, Number(d));
+      return Number.isNaN(dt.getTime()) ? null : dt.toISOString().slice(0, 10);
+    }
+    const native = new Date(str);
+    return Number.isNaN(native.getTime()) ? null : native.toISOString().slice(0, 10);
+  };
 
-    const forecast_date = typeof dateVal === "string" ? dateVal : XLSX.SSF.format("yyyy-mm-dd", dateVal);
-    return {
-      forecast_date,
-      guests: Number(guestsVal ?? 0),
-      breakfasts: Number(breakfastsVal ?? 0),
-    };
-  });
+  const rows = json
+    .map((row) => {
+      const dateVal = row.fecha ?? row.date ?? row.Fecha ?? row.Date;
+      const guestsVal = row.ocupacion ?? row.guests ?? row.Ocupacion ?? row.Guests ?? row.Occupancy;
+      const breakfastsVal = row.desayunos ?? row.breakfasts ?? row.Desayunos ?? row.Breakfasts;
+      const forecast_date = normalizeDate(dateVal);
+      if (!forecast_date) return null;
+      const breakfasts = Number(breakfastsVal ?? 0);
+      if (Number.isNaN(breakfasts)) return null;
+      return {
+        forecast_date,
+        guests: Number(guestsVal ?? 0) || 0,
+        breakfasts,
+      };
+    })
+    .filter((r): r is ForecastRow => r !== null);
+
+  // dedup by date, keep last value
+  const dedup = new Map<string, ForecastRow>();
+  for (const r of rows) dedup.set(r.forecast_date, r);
+  return Array.from(dedup.values()).sort((a, b) => a.forecast_date.localeCompare(b.forecast_date));
 }
 
 export async function upsertForecasts(rows: ForecastRow[], orgId: string) {

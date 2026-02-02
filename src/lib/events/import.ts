@@ -39,7 +39,7 @@ function parseSheet(sheet: XLSX.WorkSheet, sheetName: string): EventRow[] {
   const json = XLSX.utils.sheet_to_json<Record<string, any>>(sheet, { defval: null, header: 1, raw: false });
   if (json.length === 0) return [];
   const header = json[0] as any[];
-  const halls = header.slice(1).map((h) => String(h ?? "").trim()).filter(Boolean);
+  const baseHalls = header.slice(1).map((h) => String(h ?? "").trim()).filter(Boolean);
   const monthHint = String(header[0] ?? "").trim().toUpperCase();
   const monthMap: Record<string, number> = {
     ENE: 0, ENERO: 0,
@@ -60,35 +60,48 @@ function parseSheet(sheet: XLSX.WorkSheet, sheetName: string): EventRow[] {
   const sheetYear = yearMatch ? Number(yearMatch[1]) : new Date().getFullYear();
 
   const rows: EventRow[] = [];
+  let currentMonth = monthIdx;
+
   for (let r = 1; r < json.length; r++) {
     const row = json[r] as any[];
-    const dateVal = row[0];
-    if (!dateVal) continue;
-    let event_date: string | null = null;
-    if (typeof dateVal === "string") {
-      event_date = normalizeDate(dateVal);
-    } else if (typeof dateVal === "number") {
-      if (dateVal < 60 && monthIdx !== null) {
-        const day = Number(dateVal);
-        const dt = new Date(sheetYear, monthIdx, day);
-        event_date = dt.toISOString().slice(0, 10);
-      } else {
-        event_date = XLSX.SSF.format("yyyy-mm-dd", dateVal);
+    const first = row[0];
+
+    // detect new month header inside same sheet
+    if (typeof first === "string" && first.trim()) {
+      const mh = String(first).trim().toUpperCase();
+      if (monthMap[mh] !== undefined) {
+        currentMonth = monthMap[mh];
+        continue;
       }
     }
-    if (!event_date || !/^\d{4}-\d{2}-\d{2}$/.test(event_date)) continue;
+
+    // day rows
+    const day = Number(first);
+    if (!Number.isFinite(day) || day < 1 || day > 31 || currentMonth === null) continue;
+
+    const event_date = new Date(sheetYear, currentMonth, day).toISOString().slice(0, 10);
+    const halls = (json[0] as any[]).slice(1).map((h) => String(h ?? "").trim());
+
     halls.forEach((hall, idx) => {
+      const hallName = hall || `SALON ${idx + 1}`;
       const cell = row[idx + 1];
       const parsed = parseCell(cell);
-      if (!parsed || parsed.attendees === 0) return;
+      if (!parsed) return;
       rows.push({
         event_date,
-        hall,
+        hall: hallName,
         name: parsed.name,
         event_type: parsed.event_type,
         attendees: parsed.attendees,
       });
     });
+  }
+
+  // dedup by date+hall+name
+  const dedup = new Map<string, EventRow>();
+  for (const r of rows) {
+    const key = `${r.event_date}-${r.hall}-${r.name}`;
+    if (!dedup.has(key)) dedup.set(key, r);
   }
   return rows;
 }
