@@ -23,10 +23,10 @@ export async function POST(req: NextRequest) {
       const items = imported.items.map((it) => {
         const found = findProductByName(orgId, it.product_name);
         if (found) return { ...it, unit_price: it.unit_price || found.unit_price, unit: it.unit || found.unit };
-        if (!found && it.unit_price > 0) {
-          upsertProduct({ org_id: orgId, name: it.product_name, unit: it.unit || "UD", unit_price: it.unit_price });
-        }
-        return it;
+        // crear producto aunque no traiga precio (se deja 0 para editar después)
+        const price = it.unit_price ?? 0;
+        upsertProduct({ org_id: orgId, name: it.product_name, unit: it.unit || "UD", unit_price: price });
+        return { ...it, unit_price: price };
       });
       const id = upsertRecipeWithItems({ org_id: orgId, name: imported.name, servings: imported.servings, date: imported.date, items });
       return NextResponse.json({ id, summary: { total_cost: imported.total_cost, items: items.length }, mode: isE2E ? "e2e" : "stub" }, { status: 201 });
@@ -42,10 +42,9 @@ export async function POST(req: NextRequest) {
     const items = imported.items.map((it) => {
       const found = findProductByName(orgId, it.product_name);
       if (found) return { ...it, unit_price: it.unit_price || found.unit_price, unit: it.unit || found.unit };
-      if (!found && it.unit_price > 0) {
-        upsertProduct({ org_id: orgId, name: it.product_name, unit: it.unit || "UD", unit_price: it.unit_price });
-      }
-      return it;
+      const price = it.unit_price ?? 0;
+      upsertProduct({ org_id: orgId, name: it.product_name, unit: it.unit || "UD", unit_price: price });
+      return { ...it, unit_price: price };
     });
     const id = upsertRecipeWithItems({ org_id: orgId, name: imported.name, servings: imported.servings, date: imported.date, items });
     return NextResponse.json({ id, summary: { total_cost: imported.total_cost, items: items.length }, mode: isE2E ? "e2e" : "stub" }, { status: 201 });

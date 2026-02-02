@@ -39,14 +39,21 @@ export async function POST(req: NextRequest) {
       const parsed = recetaOcrSchema.parse(data);
       if (parsed.table && parsed.table.length) {
         const products = listProducts(orgId);
-        const items = parsed.table.map((row) => ({
-          product_name: row.producto,
-          unit: row.unidad ?? "UD",
-          gross_qty: row.cantidad_bruta ?? row.cantidad_neta ?? 0,
-          net_qty: row.cantidad_neta ?? row.cantidad_bruta ?? 0,
-          waste_pct: row.desperdicio_pct ?? 0,
-          unit_price: row.precio_unitario ?? findProductByName(orgId, row.producto)?.unit_price ?? 0,
-        }));
+        const items = parsed.table.map((row) => {
+          const found = findProductByName(orgId, row.producto);
+          const price = row.precio_unitario ?? found?.unit_price ?? 0;
+          if (!found) {
+            upsertProduct({ org_id: orgId, name: row.producto, unit: row.unidad ?? "UD", unit_price: price });
+          }
+          return {
+            product_name: row.producto,
+            unit: row.unidad ?? found?.unit ?? "UD",
+            gross_qty: row.cantidad_bruta ?? row.cantidad_neta ?? 0,
+            net_qty: row.cantidad_neta ?? row.cantidad_bruta ?? 0,
+            waste_pct: row.desperdicio_pct ?? 0,
+            unit_price: price,
+          };
+        });
         const id = upsertRecipeWithItems({ org_id: "org-dev", name: parsed.title ?? "Receta OCR", servings: 1, items });
         return NextResponse.json({ data: { ...parsed, recipe_id: id }, mode: "prod" });
       }
