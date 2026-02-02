@@ -26,13 +26,47 @@ export default function ForecastsPage() {
   startOfWeek.setDate(today.getDate() - today.getDay()); // domingo
   const endOfWeek = new Date(startOfWeek);
   endOfWeek.setDate(startOfWeek.getDate() + 6);
+  const normalizeDate = (d: string) => {
+    if (!d) return null;
+    const t = d.trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(t)) return t;
+    const ddm = t.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2,4})$/);
+    if (ddm) {
+      const [, d1, m1, y1] = ddm;
+      const year = y1.length === 2 ? Number(`20${y1}`) : Number(y1);
+      const dt = new Date(year, Number(m1) - 1, Number(d1));
+      return Number.isNaN(dt.getTime()) ? null : dt.toISOString().slice(0, 10);
+    }
+    if (/^\d{1,2}$/.test(t)) {
+      const day = Number(t);
+      if (day >= 1 && day <= 31) {
+        const today = new Date();
+        const dt = new Date(today.getFullYear(), today.getMonth(), day);
+        return dt.toISOString().slice(0, 10);
+      }
+    }
+    return null;
+  };
+
+  const filteredRows = useMemo(
+    () =>
+      rows
+        .map((r) => {
+          const iso = normalizeDate(r.forecast_date);
+          return iso ? { ...r, forecast_date: iso } : null;
+        })
+        .filter((r): r is DeltaRow => r !== null)
+        .sort((a, b) => a.forecast_date.localeCompare(b.forecast_date)),
+    [rows],
+  );
+
   const currentWeekRows = useMemo(
     () =>
-      rows.filter((r) => {
+      filteredRows.filter((r) => {
         const d = new Date(r.forecast_date);
         return d >= startOfWeek && d <= endOfWeek;
       }),
-    [rows, startOfWeek, endOfWeek],
+    [filteredRows, startOfWeek, endOfWeek],
   );
 
   const next7Days = useMemo(() => {
@@ -40,10 +74,10 @@ export default function ForecastsPage() {
     return Array.from({ length: 7 }).map((_, i) => {
       const d = new Date(today.getTime() + i * 86400000);
       const iso = d.toISOString().slice(0, 10);
-      const match = rows.find((r) => r.forecast_date === iso);
-      return { date: iso, breakfasts: match?.breakfasts ?? 0, actual: match?.actual_breakfasts ?? 0, delta: match?.delta ?? - (match?.breakfasts ?? 0) };
+      const match = filteredRows.find((r) => r.forecast_date === iso);
+      return { date: iso, breakfasts: match?.breakfasts ?? 0, actual: match?.actual_breakfasts ?? 0, delta: match?.delta ?? -(match?.breakfasts ?? 0) };
     });
-  }, [rows]);
+  }, [filteredRows]);
 
   useEffect(() => {
     refresh();
@@ -284,55 +318,6 @@ export default function ForecastsPage() {
       </section>
 
       <section className="bg-white/5 border border-white/10 rounded-xl p-6 space-y-3">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Semana en curso</h2>
-          <span className="text-xs text-slate-400">
-            {
-              rows.filter((r) => {
-                const d = new Date(r.forecast_date);
-                return d >= startOfWeek && d <= endOfWeek;
-              }).length
-            }{" "}
-            días
-          </span>
-        </div>
-        {rows.filter((r) => {
-          const d = new Date(r.forecast_date);
-          return d >= startOfWeek && d <= endOfWeek;
-        }).length === 0 && <p className="text-sm text-slate-400">No hay datos de esta semana.</p>}
-        {rows.filter((r) => {
-          const d = new Date(r.forecast_date);
-          return d >= startOfWeek && d <= endOfWeek;
-        }).length > 0 && (
-          <table className="w-full text-sm" aria-label="forecast-current-week">
-            <thead className="text-slate-300">
-              <tr>
-                <th className="text-left py-2">Fecha</th>
-                <th className="text-right py-2">Previsto</th>
-                <th className="text-right py-2">Real</th>
-                <th className="text-right py-2">Delta</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows
-                .filter((r) => {
-                  const d = new Date(r.forecast_date);
-                  return d >= startOfWeek && d <= endOfWeek;
-                })
-                .map((row) => (
-                  <tr key={row.forecast_date}>
-                    <td className="py-2">{row.forecast_date}</td>
-                    <td className="py-2 text-right">{row.breakfasts}</td>
-                    <td className="py-2 text-right">{row.actual_breakfasts}</td>
-                    <td className="py-2 text-right">{row.delta}</td>
-                  </tr>
-                ))}
-            </tbody>
-          </table>
-        )}
-      </section>
-
-      <section className="bg-white/5 border border-white/10 rounded-xl p-6 space-y-3">
         <h2 className="text-lg font-semibold">Delta previsto vs real</h2>
         {message && <p className="text-xs text-emerald-200">{message}</p>}
         {error && <p className="text-xs text-rose-300">{error}</p>}
@@ -346,13 +331,13 @@ export default function ForecastsPage() {
             </tr>
           </thead>
           <tbody>
-            {rows.length === 0 && (
+            {filteredRows.length === 0 && (
               <tr>
                 <td className="py-2" colSpan={4}>Sin datos</td>
               </tr>
             )}
-            {rows.map((row) => (
-              <tr key={row.org_id + row.forecast_date} data-testid="delta-row">
+            {filteredRows.map((row, idx) => (
+              <tr key={row.org_id + row.forecast_date + idx} data-testid="delta-row">
                 <td className="py-2">{row.forecast_date}</td>
                 <td className="py-2 text-right">{row.breakfasts}</td>
                 <td className="py-2 text-right">{row.actual_breakfasts}</td>

@@ -161,6 +161,17 @@ export default function EventsPage() {
     refresh();
   }, [refresh]);
 
+  useEffect(() => {
+    if (calendarRows.length === 0) return;
+    const firstDate = new Date(calendarRows[0].event_date);
+    setMonthCursor(new Date(firstDate.getFullYear(), firstDate.getMonth(), 1));
+    if (!selectedDate) {
+      const pick = calendarRows[0].event_date;
+      setSelectedDate(pick);
+      setSelectedEventHall(calendarRows[0].hall);
+    }
+  }, [calendarRows, selectedDate]);
+
   async function importFile(file: File) {
     const form = new FormData();
     form.append("file", file);
@@ -478,7 +489,7 @@ export default function EventsPage() {
               >
                 <div className="flex items-center justify-between text-[11px] text-slate-300">
                   <span>{day.label}</span>
-                  {rows.some((r) => r.event_date === day.iso) && <span className="h-2 w-2 rounded-full bg-emerald-400" />}
+                  {calendarRows.some((r) => r.event_date === day.iso) && <span className="h-2 w-2 rounded-full bg-emerald-400" />}
                 </div>
                 <div className="mt-1 flex flex-wrap gap-1">
                   {(eventsByDay.get(day.iso) ?? []).slice(0, 3).map((ev) => (
@@ -571,8 +582,8 @@ export default function EventsPage() {
             {sortedRows.length === 0 && (
               <tr><td className="py-2" colSpan={5}>Sin datos</td></tr>
             )}
-            {sortedRows.map((row) => (
-              <tr key={row.org_id + row.event_date + row.hall} data-testid="event-row" className="hover:bg-white/5">
+            {sortedRows.map((row, idx) => (
+              <tr key={`${row.org_id}-${row.event_date}-${row.hall}-${idx}`} data-testid="event-row" className="hover:bg-white/5">
                 <td className="py-2">{row.event_date}</td>
                 <td className="py-2">{row.hall}</td>
                 <td className="py-2">{row.name} {row.event_type ? `(${row.event_type})` : ""}</td>
